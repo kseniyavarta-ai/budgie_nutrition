@@ -2,7 +2,8 @@
 
 | Date | Label | What changed | Status |
 |---|---|---|---|
-| 2026-10-22 | lemon-and-blue | Dedication now reads "In memory of Lemon and Blue". | **Live** |
+| 2026-10-22 | food-groups | Food groups (Protein, Dairy, Vegetables, Fruit, Grains & starches, Legumes, Nuts & seeds, Fats & oils, Pantry, Sweets & treats, Drinks, Recipes): sectioned Foods list, group chips to filter, group picker when editing a food. | **Live** |
+| 2026-10-22 | lemon-and-blue | Dedication now reads "In memory of Lemon and Blue". | Replaced by food-groups |
 | 2026-10-22 | lemon | Yellow now matches Lemon's feathers; new icon with both budgies (blue and Lemon) on a perch; "In memory of Lemon" in Settings. | Replaced by lemon-and-blue |
 | 2026-10-22 | feathers | Budgie-feather colours (sunny yellow, leaf green, sky blue) with a colour per meal; calorie bar turns green inside your range; ★ favourites and recent foods at the top when adding; days-to-goal estimate on Today and Body (planned pace until 3+ weekly weigh-ins, then your real pace); setup code to connect another device. | Replaced by lemon |
 | 2026-10-22 | connect-help | Setup screen now shows why connecting failed and how to fix it; error messages no longer hide behind the setup screen. | Replaced by feathers |

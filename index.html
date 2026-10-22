@@ -82,6 +82,12 @@ section{display:grid;gap:14px;margin-top:14px}
 .meal .list{border-top:3px solid var(--mc,var(--line))}
 .star{border:0;background:transparent;font-size:1.15rem;width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--line)}
 .star[aria-pressed="true"]{color:var(--sun)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:700 .8rem var(--body);padding:6px 11px;border-radius:999px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.list .sec{padding:7px 12px;font:700 .72rem var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);border-top:1px solid var(--line)}
+.list .sec:first-child{border-top:0}
 .pick .sec{padding:6px 12px;font:700 .72rem var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);border-top:1px solid var(--line)}
 .pick .sec:first-child{border-top:0}
 .meal h3{display:flex;justify-content:space-between;align-items:baseline;margin:0;font:700 1.02rem var(--display)}
@@ -267,6 +273,7 @@ textarea{resize:vertical;min-height:60px}
       <button aria-pressed="false" data-f="foods">Foods</button>
       <button aria-pressed="false" data-f="fav">★</button>
     </div>
+    <div class="chips" id="gChips" role="group" aria-label="Food groups"></div>
     <div class="list" id="foodList"></div>
     <p class="note">Values are per 100 g, or per piece for things you count. Recipes are per 100 g of the cooked dish: weigh your bowl and log it.</p>
   </section>
@@ -393,6 +400,7 @@ textarea{resize:vertical;min-height:60px}
       <label>Fat g<input type="number" id="fF" step="any" inputmode="decimal"></label>
       <label>Fibre g<input type="number" id="fFb" step="any" inputmode="decimal"></label>
       <label>Grams per piece<input type="number" id="fPieceG" step="any" inputmode="decimal" placeholder="optional"></label>
+      <label class="full">Food group<select id="fGroup"></select></label>
       <label class="full">Notes<input id="fNote" placeholder="Source, brand, label date"></label>
       <label class="chk full"><input type="checkbox" id="fFav"> ★ Favourite (shows first when adding food)</label>
       <button class="btn full" type="submit">Save food</button>
@@ -434,7 +442,7 @@ textarea{resize:vertical;min-height:60px}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · lemon-and-blue";
+const VERSION = "v2026.10.22 · food-groups";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -746,20 +754,32 @@ async function lookup(){
     const kcal = n["energy-kcal_100g"] ?? (n["energy_100g"]? n["energy_100g"]/4.184 : null);
     if(kcal==null){ $("bcOut").textContent="Found it, but it has no nutrition data. Use Photo with the label switch on."; return; }
     const name=[j.product.brands&&j.product.brands.split(",")[0],j.product.product_name].filter(Boolean).join(" ")||"Product "+code;
-    const f={id:slug(name),name,basis:"100g",unit:"",kcal:r1(kcal),p:r1(n.proteins_100g),c:r1(n.carbohydrates_100g),f:r1(n.fat_100g),fb:r1(n.fiber_100g),barcode:code,note:"Open Food Facts"+(j.product.serving_size?" · serving "+j.product.serving_size:"")};
+    const f={id:slug(name),name,basis:"100g",unit:"",group:"Other",kcal:r1(kcal),p:r1(n.proteins_100g),c:r1(n.carbohydrates_100g),f:r1(n.fat_100g),fb:r1(n.fiber_100g),barcode:code,note:"Open Food Facts"+(j.product.serving_size?" · serving "+j.product.serving_size:"")};
     put("foods",f.id,f); bcFood=f; renderFoods(); showBc("Saved to your library");
   }catch(e){ $("bcOut").textContent="Lookup failed. Check your connection."; }
 }
 function showBc(msg){ $("bcOut").innerHTML=`<b>${esc(bcFood.name)}</b><br>${fmt(bcFood.kcal)} kcal · ${bcFood.p} P · ${bcFood.c} C · ${bcFood.f} F per 100 g<br>${esc(msg)}`; $("bcAmtWrap").hidden=false; $("bcAmt").focus(); updAdd(); }
 
 /* ================= foods ================= */
-let FFILTER="all";
+const GROUPS=["Protein","Dairy","Vegetables","Fruit","Grains & starches","Legumes","Nuts & seeds","Fats & oils","Pantry","Sweets & treats","Drinks","Recipes","Other"];
+let FFILTER="all", FGROUP="";
+$("fGroup").innerHTML=GROUPS.map(g=>`<option>${esc(g)}</option>`).join("");
+function renderChips(){
+  const present=new Set(Object.values(DB.foods).map(f=>f.group||"Other"));
+  const gs=GROUPS.filter(g=>present.has(g));
+  $("gChips").innerHTML=[`<button data-g="" aria-pressed="${!FGROUP}">All groups</button>`].concat(gs.map(g=>`<button data-g="${esc(g)}" aria-pressed="${FGROUP===g}">${esc(g)}</button>`)).join("");
+  $("gChips").querySelectorAll("button").forEach(b=>b.onclick=()=>{ FGROUP=b.dataset.g; renderFoods(); });
+}
 document.querySelectorAll("#fFilter button").forEach(b=>b.onclick=()=>{ FFILTER=b.dataset.f; document.querySelectorAll("#fFilter button").forEach(x=>x.setAttribute("aria-pressed",x===b)); renderFoods(); });
 $("fSearch").oninput=renderFoods;
 function renderFoods(){
   const q=$("fSearch").value.trim().toLowerCase();
-  const list=foodsSorted(q).filter(f=>FFILTER==="all"||(FFILTER==="fav"?f.fav:(FFILTER==="recipes")===!!(f.recipe&&f.recipe.ingredients)));
-  $("foodList").innerHTML = list.length ? list.map(f=>`<div class="item"><button class="nm" data-f="${esc(f.id)}"><b>${esc(f.name)}${f.recipe?'<span class="tag">recipe</span>':''}</b><small>${basisTxt(f)} · ${r1(f.p)} P · ${r1(f.c)} C · ${r1(f.f)} F · ${r1(f.fb)} fibre</small></button><div class="kc">${fmt(f.kcal)}<small>kcal</small></div><button class="star" data-star="${esc(f.id)}" aria-pressed="${!!f.fav}" aria-label="${f.fav?"Remove from":"Add to"} favourites">★</button></div>`).join("")
+  renderChips();
+  const list=foodsSorted(q).filter(f=>FFILTER==="all"||(FFILTER==="fav"?f.fav:(FFILTER==="recipes")===!!(f.recipe&&f.recipe.ingredients))).filter(f=>!FGROUP||(f.group||"Other")===FGROUP);
+  const sectioned = !q && !FGROUP && FFILTER==="all";
+  if(sectioned) list.sort((a,b)=>GROUPS.indexOf(a.group||"Other")-GROUPS.indexOf(b.group||"Other")||a.name.localeCompare(b.name));
+  let lastG=null;
+  $("foodList").innerHTML = list.length ? list.map(f=>{ const g=f.group||"Other"; const head = sectioned && g!==lastG ? `<div class="sec">${esc(g)}</div>` : ""; lastG=g; return head+`<div class="item"><button class="nm" data-f="${esc(f.id)}"><b>${esc(f.name)}${f.recipe?'<span class="tag">recipe</span>':''}</b><small>${basisTxt(f)} · ${r1(f.p)} P · ${r1(f.c)} C · ${r1(f.f)} F · ${r1(f.fb)} fibre</small></button><div class="kc">${fmt(f.kcal)}<small>kcal</small></div><button class="star" data-star="${esc(f.id)}" aria-pressed="${!!f.fav}" aria-label="${f.fav?"Remove from":"Add to"} favourites">★</button></div>`; }).join("")
     : `<div class="empty">${Object.keys(DB.foods).length?"No match.":"No foods yet. Import your data in Settings, or tap New food."}</div>`;
   $("foodList").querySelectorAll("[data-star]").forEach(b=>b.onclick=()=>{ const f={...DB.foods[b.dataset.star]}; f.fav=!f.fav; put("foods",f.id,f); renderFoods(); toast(f.fav?"Added to favourites":"Removed from favourites"); });
   $("foodList").querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ const f=DB.foods[b.dataset.f]; f.recipe&&f.recipe.ingredients?openRecipe(f):openFood(f); });
@@ -771,7 +791,7 @@ function openFood(f){
   $("fName").value=f.name||""; $("fBasis").value=f.basis||"100g"; $("fUnit").value=f.unit||"";
   [["fK","kcal"],["fP","p"],["fC","c"],["fF","f"],["fFb","fb"],["fPieceG","pieceG"],["fNote","note"]].forEach(([i,k])=>$(i).value=f[k]??"");
   if(!$("fNote").value && typeof f.recipe==="string") $("fNote").value=f.recipe;
-  $("fFav").checked=!!f.fav;
+  $("fFav").checked=!!f.fav; $("fGroup").value=f.group||"Other";
   $("fDel").hidden=!editFood;
   openSheet($("foodSheet")); setTimeout(()=>$("fName").focus(),60);
 }
@@ -782,7 +802,7 @@ $("foodForm").onsubmit=e=>{ e.preventDefault();
   const f={...base,id:base.id||slug($("fName").value),name:$("fName").value.trim(),basis:$("fBasis").value,unit:$("fUnit").value.trim(),kcal:n($("fK").value),p:n($("fP").value),c:n($("fC").value),f:n($("fF").value),fb:n($("fFb").value)};
   if($("fPieceG").value) f.pieceG=+$("fPieceG").value; else delete f.pieceG;
   if($("fNote").value) f.note=$("fNote").value.trim();
-  f.fav=$("fFav").checked;
+  f.fav=$("fFav").checked; f.group=$("fGroup").value;
   put("foods",f.id,f); renderFoods(); renderPick(); closeSheet(); toast(editFood?"Food updated":"Food saved");
 };
 $("fDel").onclick=()=>armDelete($("fDel"),()=>{ del("foods",editFood.id); renderFoods(); closeSheet(); toast("Deleted"); });
@@ -867,7 +887,7 @@ $("rSave").onclick=()=>{
   const {t,raw}=recTotals(), cw=cookedWeight(raw), name=$("rName").value.trim();
   const id=REC.id||slug(name);
   const per={}; NUT.forEach(k=>per[k]=r1(t[k]/cw*100));
-  const f={...(DB.foods[id]||{}),id,name,basis:"100g",unit:"",...per,
+  const f={...(DB.foods[id]||{}),id,name,basis:"100g",unit:"",group:"Recipes",...per,
     recipe:{ingredients:REC.ings,cookedWeight:parseFloat(REC.weight)||null,pot:REC.pot,batchWeight:r1(cw),batch:Object.fromEntries(NUT.map(k=>[k,r1(t[k])]))}};
   put("foods",id,f); renderFoods(); closeSheet(); toast("Recipe saved: "+fmt(per.kcal)+" kcal per 100 g");
 };
