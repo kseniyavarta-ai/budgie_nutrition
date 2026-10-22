@@ -189,6 +189,7 @@ textarea{resize:vertical;min-height:60px}
 .calc td:last-child{text-align:right;white-space:nowrap;padding-left:10px;font-family:var(--mono);font-variant-numeric:tabular-nums}
 .calc small{color:var(--muted);font-size:.8rem}
 details summary{list-style:none}
+.update{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 8px);z-index:70;border:0;background:var(--sun);color:var(--sun-ink);font:700 .9rem var(--body);padding:10px 16px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer;max-width:92vw}
 .ver{font:400 .75rem var(--mono);color:var(--muted);text-align:center}
 </style>
 </head>
@@ -519,11 +520,12 @@ details summary{list-style:none}
 </div>
 
 <div class="toast" id="toast" hidden></div>
+<button class="update" id="updBar" hidden>✨ New version of Budgie. Tap to update</button>
 
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · say-it";
+const VERSION = "v2026.10.22 · say-it-2";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -1248,6 +1250,14 @@ $("cCode").onclick=async()=>{ if(!CONN||!CONN.url){ toast("Connect first"); retu
   try{ await navigator.clipboard.writeText(code); toast("Setup code copied. Paste it on the other device; keep it private."); }catch(e){ prompt?.("Copy this setup code",code); } };
 $("sLocal").onclick=()=>{ CONN={local:true}; LS.set("budgie-conn",CONN); $("setup").hidden=true; status(); };
 
+/* ================= updates ================= */
+async function checkUpdate(){
+  try{ const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"}); const j=await r.json();
+    if(j.version && j.version!==VERSION) $("updBar").hidden=false; }catch(e){}
+}
+$("updBar").onclick=()=>{ location.replace(location.pathname+"?v="+Date.now()); };
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkUpdate(); });
+
 /* ================= boot ================= */
 function renderAll(){ renderDate(); renderToday(); renderBody(); renderFoods(); fillPlan(); renderPots(); }
 $("ver").textContent=VERSION; $("verSetup").textContent=VERSION;
@@ -1255,6 +1265,7 @@ if(CONN&&CONN.url){ $("cUrl").value=CONN.url; $("cTok").value=CONN.token||""; }
 setTab(LS.get("budgie-tab","today"));
 renderAll(); status();
 if(!CONN) showSetup(); else syncDown();
+checkUpdate();
 })();
 </script>
 </body>
