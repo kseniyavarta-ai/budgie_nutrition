@@ -161,6 +161,31 @@ textarea{resize:vertical;min-height:60px}
 .goal b{font:700 1.5rem/1 var(--display);font-variant-numeric:tabular-nums;color:var(--leaf)}
 .goal span{font-size:.85rem;color:var(--muted)}
 .goal .r{text-align:right}
+.gc-top{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:10px;align-items:end}
+.gc-goal{text-align:center}
+.gc-in{display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:center}
+.gc-in input{width:4.6em;font:700 1.3rem var(--display);text-align:center;padding:4px 6px;color:var(--leaf)}
+.gc-in span{color:var(--muted);font-size:.85rem;text-transform:none;letter-spacing:0}
+.gc-in .btn{flex-basis:100%;padding:6px 10px;font-size:.8rem;background:var(--leaf)}
+.gc-top .stat:last-child{text-align:right}
+.gbar{height:14px;border-radius:7px;background:var(--soft);overflow:hidden}
+.gbar i{display:block;height:100%;width:0;min-width:14px;border-radius:7px;background:linear-gradient(90deg,var(--sun),var(--leaf))}
+.gc-row{display:flex;justify-content:space-between;gap:8px;margin-top:-6px}
+.gc-row small{color:var(--muted);font-size:.78rem}
+.next{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.next>div{background:var(--sun-soft);border-radius:12px;padding:10px 12px;display:grid;gap:2px;min-width:0}
+.next>div:last-child{background:var(--soft)}
+.next .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.next b{font:700 1.1rem var(--display)}
+.next small{color:var(--muted);font-size:.8rem}
+#weighCard.due{border:2px solid var(--sun)}
+.calc{display:grid;gap:8px;background:var(--leaf-soft);border-radius:12px;padding:12px}
+.calc .big{font:700 1.6rem/1 var(--display);font-variant-numeric:tabular-nums}
+.calc table{width:100%;border-collapse:collapse;font-size:.88rem}
+.calc td{padding:3px 0;border-bottom:1px solid var(--line)}
+.calc td:last-child{text-align:right;white-space:nowrap;padding-left:10px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.calc small{color:var(--muted);font-size:.8rem}
+details summary{list-style:none}
 .ver{font:400 .75rem var(--mono);color:var(--muted);text-align:center}
 </style>
 </head>
@@ -220,32 +245,28 @@ textarea{resize:vertical;min-height:60px}
 
   <!-- BODY -->
   <section id="v-body" hidden>
-    <div class="card">
-      <h2>Progress to goal</h2>
-      <div class="stats">
-        <div class="stat"><span>Latest</span><b id="bLatest">–</b><small id="bLatestD"></small></div>
-        <div class="stat"><span>Lost</span><b id="bLost">–</b><small id="bLostSub"></small></div>
-        <div class="stat"><span>To go</span><b id="bToGo">–</b><small id="bToGoSub"></small></div>
+    <div class="card goalcard">
+      <div class="feather" aria-hidden="true"></div>
+      <div class="gc-top">
+        <div class="stat"><span>Now</span><b id="gNow">–</b><small id="gNowD"></small></div>
+        <div class="stat gc-goal"><span>Goal</span>
+          <form id="goalForm" class="gc-in"><input type="number" id="gGoal" step="0.1" inputmode="decimal" aria-label="Goal weight in kg" placeholder="63"><span>kg</span><button class="btn" type="submit" id="gSave" hidden>Set</button></form>
+        </div>
+        <div class="stat"><span>To go</span><b id="gToGo">–</b><small id="gToGoSub"></small></div>
       </div>
+      <div class="gbar" aria-hidden="true"><i id="gBar"></i></div>
+      <div class="gc-row"><small id="gStart"></small><small id="gPct"></small></div>
       <div class="goal" id="bGoal" hidden></div>
-      <svg class="chart" id="chart" viewBox="0 0 340 170" role="img" aria-label="Weekly weight"></svg>
-      <div class="stats">
-        <div class="stat"><span>Waist</span><b id="bWaist">–</b><small id="bWaistSub"></small></div>
-        <div class="stat"><span>Hips</span><b id="bHips">–</b><small id="bHipsSub"></small></div>
-        <div class="stat"><span>This week</span><b id="bWeek">–</b><small>kg vs last</small></div>
+      <div class="next">
+        <div><span class="lbl">Next weigh-in</span><b id="nWeigh">–</b><small id="nWeighSub"></small></div>
+        <div><span class="lbl">Next milestone</span><b id="nMile">–</b><small id="nMileSub"></small></div>
       </div>
+      <p class="note" id="nOnTrack" hidden></p>
     </div>
-    <div class="card">
-      <h2>Last 7 days</h2>
-      <div class="stats">
-        <div class="stat"><span>Avg kcal</span><b id="wK">–</b><small id="wKSub"></small></div>
-        <div class="stat"><span>Avg protein</span><b id="wP">–</b><small id="wPSub"></small></div>
-        <div class="stat"><span>Avg fibre</span><b id="wF">–</b><small id="wFSub"></small></div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Weekly weigh-in</h2>
-      <p class="note" id="nextWeigh">Weigh in on Mondays: morning, after the bathroom, before food.</p>
+
+    <div class="card" id="weighCard">
+      <h2 id="weighTitle">Log your weigh-in</h2>
+      <p class="note" id="nextWeigh">Morning, after the bathroom, before food and drink.</p>
       <form class="grid" id="bodyForm">
         <label>Date<input type="date" id="bDate" required></label>
         <label>Weight (kg)<input type="number" id="bKg" step="0.1" inputmode="decimal"></label>
@@ -253,6 +274,24 @@ textarea{resize:vertical;min-height:60px}
         <label>Hips (cm)<input type="number" id="bHi" step="0.5" inputmode="decimal"></label>
         <button class="btn full" type="submit">Save weigh-in</button>
       </form>
+    </div>
+
+    <div class="card">
+      <h2>Your trend</h2>
+      <svg class="chart" id="chart" viewBox="0 0 340 170" role="img" aria-label="Weekly weight"></svg>
+      <div class="stats">
+        <div class="stat"><span>This week</span><b id="bWeek">–</b><small>kg vs last</small></div>
+        <div class="stat"><span>Waist</span><b id="bWaist">–</b><small id="bWaistSub"></small></div>
+        <div class="stat"><span>Hips</span><b id="bHips">–</b><small id="bHipsSub"></small></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Last 7 days of food</h2>
+      <div class="stats">
+        <div class="stat"><span>Avg kcal</span><b id="wK">–</b><small id="wKSub"></small></div>
+        <div class="stat"><span>Avg protein</span><b id="wP">–</b><small id="wPSub"></small></div>
+        <div class="stat"><span>Avg fibre</span><b id="wF">–</b><small id="wFSub"></small></div>
+      </div>
     </div>
     <div class="card">
       <h2>History</h2>
@@ -281,18 +320,47 @@ textarea{resize:vertical;min-height:60px}
   <!-- SETTINGS -->
   <section id="v-settings" hidden>
     <div class="card">
-      <h2>Plan</h2>
-      <form class="grid" id="planForm">
-        <label>Calories low<input type="number" id="pLow" inputmode="numeric"></label>
-        <label>Calories high<input type="number" id="pHigh" inputmode="numeric"></label>
-        <label>Protein (g)<input type="number" id="pProt" inputmode="numeric"></label>
-        <label>Fibre (g)<input type="number" id="pFib" inputmode="numeric"></label>
-        <label>Start weight (kg)<input type="number" id="pStart" step="0.1" inputmode="decimal"></label>
-        <label>Goal weight (kg)<input type="number" id="pGoal" step="0.1" inputmode="decimal"></label>
-        <label>Start date<input type="date" id="pDate"></label>
-        <label>Planned pace (kg/week)<input type="number" id="pPace" step="0.05" inputmode="decimal"></label>
-        <button class="btn full" type="submit">Save plan</button>
+      <h2>Your plan</h2>
+      <p class="note">Tell Budgie about you and it works out your calories and macros. It uses your latest weigh-in, and once you have 3+ weekly weigh-ins it switches to your real, measured burn.</p>
+      <form class="grid" id="profForm">
+        <label>Sex<select id="uSex"><option value="f">Female</option><option value="m">Male</option></select></label>
+        <label>Age<input type="number" id="uAge" inputmode="numeric"></label>
+        <label>Height (cm)<input type="number" id="uH" inputmode="decimal"></label>
+        <label>Weight now (kg)<input type="number" id="uW" step="0.1" inputmode="decimal"></label>
+        <label class="full">Activity<select id="uAct">
+          <option value="1.2">Sitting most of the day</option>
+          <option value="1.375">Light: walks, 1–2 workouts/wk</option>
+          <option value="1.55">Moderate: daily walks + lifting 3×/wk</option>
+          <option value="1.725">Very active: training 5–6×/wk</option>
+        </select></label>
+        <label>Goal weight (kg)<input type="number" id="uGoal" step="0.1" inputmode="decimal"></label>
+        <label>Pace<select id="uPace">
+          <option value="0.25">Gentle · 0.25 kg/wk</option>
+          <option value="0.35">Steady · 0.35 kg/wk</option>
+          <option value="0.5">Faster · 0.5 kg/wk</option>
+        </select></label>
+        <label>Body fat % (optional)<input type="number" id="uBf" step="0.5" inputmode="decimal" placeholder="if you know it"></label>
+        <label>Protein (g per kg)<select id="uProt">
+          <option value="1.6">1.6 · minimum</option>
+          <option value="1.8">1.8 · best</option>
+          <option value="2.0">2.0 · higher</option>
+          <option value="2.2">2.2 · max useful</option>
+        </select></label>
+        <button class="btn full" type="submit">Calculate for me</button>
       </form>
+      <div id="calcOut" hidden></div>
+      <details>
+        <summary class="preview" style="cursor:pointer">Adjust numbers by hand</summary>
+        <form class="grid" id="planForm" style="margin-top:10px">
+          <label>Calories low<input type="number" id="pLow" inputmode="numeric"></label>
+          <label>Calories high<input type="number" id="pHigh" inputmode="numeric"></label>
+          <label>Protein (g)<input type="number" id="pProt" inputmode="numeric"></label>
+          <label>Fibre (g)<input type="number" id="pFib" inputmode="numeric"></label>
+          <label>Start weight (kg)<input type="number" id="pStart" step="0.1" inputmode="decimal"></label>
+          <label>Start date<input type="date" id="pDate"></label>
+          <button class="btn ghost full" type="submit">Save my numbers</button>
+        </form>
+      </details>
     </div>
     <div class="card">
       <h2>Pots and pans</h2>
@@ -442,7 +510,7 @@ textarea{resize:vertical;min-height:60px}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · food-groups";
+const VERSION = "v2026.10.22 · goal-and-plan";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -582,7 +650,7 @@ function renderToday(){
   $("kBar").style.width=Math.min(100,T.kcal/max*100)+"%";
   $("kBar").style.background = left<0?"var(--over)":T.kcal>=P.kcalLow?"var(--leaf)":"var(--accent)";
   $("kBand").style.left=(P.kcalLow/max*100)+"%"; $("kBand").style.width=((P.kcalHigh-P.kcalLow)/max*100)+"%";
-  const mid=(P.kcalLow+P.kcalHigh)/2, carbG=Math.round((mid-P.protein*4)*0.5/4), fatG=Math.round((mid-P.protein*4)*0.5/9);
+  const mid=(P.kcalLow+P.kcalHigh)/2, carbG=P.carbs||Math.round((mid-P.protein*4)*0.5/4), fatG=P.fat||Math.round((mid-P.protein*4)*0.5/9);
   const rows=[["Protein",T.p,P.protein,"--prot"],["Fibre",T.fb,P.fibre,"--fibre"],["Carbs",T.c,carbG,"--carb"],["Fat",T.f,fatG,"--fat"]];
   $("macros").innerHTML=rows.map(([n,v,t,c])=>`<div class="m"><div class="row"><span>${n}</span><b>${Math.round(v)} / ${t} g</b></div><div class="bar"><i style="width:${Math.min(100,v/t*100)}%;background:var(${c})"></i></div></div>`).join("");
   renderGoal("tGoal");
@@ -893,58 +961,109 @@ $("rSave").onclick=()=>{
 };
 $("rDel").onclick=()=>armDelete($("rDel"),()=>{ del("foods",REC.id); renderFoods(); closeSheet(); toast("Recipe deleted"); });
 
-/* ================= days to goal ================= */
+/* ================= plan math ================= */
+const weighIns = () => Object.values(DB.body).filter(x=>x.kg>0).sort((a,b)=>a.date.localeCompare(b.date));
+const latestKg = () => { const w=weighIns(); return w.length?w[w.length-1].kg:(plan().startKg||null); };
+function trendRate(){ // kg lost per week from weekly weigh-ins (needs 3+ over 14+ days)
+  const w=weighIns(); if(w.length<3) return null;
+  const span=(parse(w[w.length-1].date)-parse(w[0].date))/864e5; if(span<14) return null;
+  const xs=w.map(x=>(parse(x.date)-parse(w[0].date))/864e5/7), ys=w.map(x=>x.kg);
+  const mx=xs.reduce((a,b)=>a+b)/xs.length, my=ys.reduce((a,b)=>a+b)/ys.length;
+  const slope=xs.reduce((a,x,i)=>a+(x-mx)*(ys[i]-my),0)/xs.reduce((a,x)=>a+(x-mx)**2,0);
+  return {rate:-slope, from:w[0].date, to:w[w.length-1].date, weeks:span/7};
+}
+function measuredTdee(){ // average intake + energy from weight change
+  const t=trendRate(); if(!t) return null;
+  const ds=Object.keys(DB.days).filter(d=>d>=t.from&&d<=t.to).map(d=>totals(DB.days[d].entries)).filter(x=>x.kcal>800);
+  const total=(parse(t.to)-parse(t.from))/864e5+1; if(ds.length<total*0.6) return null;
+  const intake=ds.reduce((a,x)=>a+x.kcal,0)/ds.length;
+  return {tdee:intake+t.rate*7700/7, intake, weeks:t.weeks, days:ds.length};
+}
+const rnd=(n,s)=>Math.round(n/s)*s;
+function calcPlan(u){
+  const w=u.weight, bmr = u.bf>0 ? 370+21.6*w*(1-u.bf/100) : 10*w+6.25*u.height-5*u.age+(u.sex==="m"?5:-161);
+  const method = u.bf>0 ? "Katch-McArdle (uses your body fat %)" : "Mifflin-St Jeor";
+  const formulaTdee=bmr*u.activity, m=measuredTdee();
+  const tdee = m ? m.tdee : formulaTdee;
+  const pace=Math.min(u.pace, w*0.007); // never faster than 0.7% of body weight a week
+  const deficit=Math.min(pace*7700/7, tdee*0.25);
+  const target=Math.max(tdee-deficit, bmr);
+  const protein=rnd(u.prot*w,5);
+  const fat=Math.max(rnd(0.8*w,5), rnd(target*0.25/9,5));
+  const carbs=Math.max(0,rnd((target-protein*4-fat*9)/4,5));
+  const fibre=Math.min(30,Math.max(20,rnd(14*target/1000,1)));
+  return {bmr:Math.round(bmr),method,formulaTdee:Math.round(formulaTdee),measured:m,tdee:Math.round(tdee),pace:r1(pace*100)/100,deficit:Math.round(deficit),
+    kcalLow:rnd(target-25,10),kcalHigh:rnd(target+25,10),protein,fat,carbs,fibre};
+}
 function goalEstimate(){
   const P=plan(); if(!P.goalKg) return null;
-  const w=Object.values(DB.body).filter(x=>x.kg>0).sort((a,b)=>a.date.localeCompare(b.date));
-  const latest=w[w.length-1]; const now=latest?latest.kg:P.startKg; if(!now) return null;
+  const now=latestKg(); if(!now) return null;
   const toGo=now-P.goalKg; if(toGo<=0) return {done:true};
-  let rate=P.pace||0.35, src="planned";
-  if(w.length>=3 && (parse(latest.date)-parse(w[0].date))/864e5>=14){
-    const xs=w.map(x=>(parse(x.date)-parse(w[0].date))/864e5/7), ys=w.map(x=>x.kg);
-    const mx=xs.reduce((a,b)=>a+b)/xs.length, my=ys.reduce((a,b)=>a+b)/ys.length;
-    const slope=xs.reduce((a,x,i)=>a+(x-mx)*(ys[i]-my),0)/xs.reduce((a,x)=>a+(x-mx)**2,0);
-    if(-slope>0.05){ rate=-slope; src="current"; }
-  }
-  const days=Math.round(toGo/rate*7), base=latest?parse(latest.date):new Date(), date=new Date(base); date.setDate(date.getDate()+days);
-  const left=Math.max(0,Math.round((date-new Date())/864e5));
-  return {days:left,date,rate,src,toGo};
+  const t=trendRate(); let rate=P.pace||0.35, src="planned";
+  if(t && t.rate>0.05){ rate=t.rate; src="current"; }
+  const w=weighIns(), base=w.length?parse(w[w.length-1].date):new Date();
+  const weeks=toGo/rate, date=new Date(base); date.setDate(date.getDate()+Math.round(weeks*7));
+  return {weeks:Math.max(1,Math.ceil((date-new Date())/864e5/7)),date,rate,src,toGo};
 }
 function renderGoal(el){
   const g=goalEstimate(), box=$(el);
   if(!g){ box.hidden=true; return; }
   box.hidden=false;
-  if(g.done){ box.innerHTML=`<div><b>Goal reached</b> <span>🎉</span></div><div class="r"><span>Time to set maintenance calories</span></div>`; return; }
-  box.innerHTML=`<div><b>~${g.days}</b> <span>days to ${plan().goalKg} kg</span></div><div class="r"><span>around ${g.date.toLocaleDateString("en-CA",{month:"short",day:"numeric"})}<br>at ${g.src==="current"?"your pace":"planned"} ${r1(g.rate*100)/100} kg/wk</span></div>`;
+  if(g.done){ box.innerHTML=`<div><b>Goal reached</b> <span>🎉</span></div><div class="r"><span>Recalculate your plan for maintenance</span></div>`; return; }
+  box.innerHTML=`<div><b>~${g.weeks}</b> <span>week${g.weeks>1?"s":""} to ${plan().goalKg} kg</span></div><div class="r"><span>around ${g.date.toLocaleDateString("en-CA",{month:"short",day:"numeric"})}<br>${r1(g.rate*100)/100} kg/wk ${g.src==="current"?"(your pace)":"(planned)"}</span></div>`;
 }
 
 /* ================= body ================= */
-function nextMonday(){ const d=new Date(); const add=(8-d.getDay())%7; d.setDate(d.getDate()+add); return d; }
+function nextMonday(){ const d=new Date(); d.setHours(0,0,0,0); const add=(8-d.getDay())%7; d.setDate(d.getDate()+add); return d; }
 function renderBody(){
   const P=plan(), b=Object.values(DB.body).sort((x,y)=>x.date.localeCompare(y.date)), w=b.filter(x=>x.kg>0), latest=w[w.length-1];
-  const start=P.startKg || (w[0]&&w[0].kg);
-  $("bLatest").textContent = latest?latest.kg.toFixed(1):"–";
-  $("bLatestD").textContent = latest?parse(latest.date).toLocaleDateString("en-CA",{month:"short",day:"numeric"}):"no weigh-ins";
-  if(latest && start){ const lost=start-latest.kg; $("bLost").textContent=(lost<0?"+":"")+Math.abs(lost).toFixed(1); $("bLostSub").textContent = P.goalKg? Math.max(0,Math.round(lost/(start-P.goalKg)*100))+"% of "+(start-P.goalKg).toFixed(1)+" kg":"kg"; }
-  else { $("bLost").textContent="–"; $("bLostSub").textContent=""; }
-  $("bToGo").textContent = latest&&P.goalKg ? Math.max(0,latest.kg-P.goalKg).toFixed(1) : "–";
-  $("bToGoSub").textContent = P.goalKg?"goal "+P.goalKg+" kg":"set a goal";
+  const start=P.startKg || (w[0]&&w[0].kg), now=latest?latest.kg:start;
+  // goal card
+  $("gNow").textContent = now?now.toFixed(1):"–";
+  $("gNowD").textContent = latest?"kg · "+parse(latest.date).toLocaleDateString("en-CA",{month:"short",day:"numeric"}):"no weigh-ins yet";
+  if(document.activeElement!==$("gGoal")) $("gGoal").value = P.goalKg??"";
+  $("gSave").hidden = true;
+  if(now && P.goalKg){
+    const toGo=Math.max(0,now-P.goalKg), total=Math.max(0.1,(start||now)-P.goalKg), pct=Math.max(0,Math.min(100,((start||now)-now)/total*100));
+    $("gToGo").textContent=toGo.toFixed(1); $("gToGoSub").textContent="kg";
+    $("gBar").style.width=pct+"%"; $("gStart").textContent=start?"Started at "+start.toFixed(1)+" kg":""; $("gPct").textContent=Math.round(pct)+"% of the way";
+  } else { $("gToGo").textContent="–"; $("gToGoSub").textContent=P.goalKg?"":"set a goal"; $("gBar").style.width="0"; $("gStart").textContent=""; $("gPct").textContent=""; }
+  renderGoal("bGoal");
+  // next weigh-in
+  const isMon=new Date().getDay()===1, doneToday=!!(DB.body[todayIso()]&&DB.body[todayIso()].kg);
+  const nm=nextMonday(); if(isMon && doneToday) nm.setDate(nm.getDate()+7);
+  const daysTo=Math.round((nm-new Date(new Date().toDateString()))/864e5);
+  $("nWeigh").textContent = daysTo===0 ? "Today 🎉" : nm.toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"});
+  $("nWeighSub").textContent = daysTo===0 ? "Monday weigh-in day" : "in "+daysTo+" day"+(daysTo>1?"s":"");
+  $("weighCard").classList.toggle("due", isMon && !doneToday);
+  $("weighTitle").textContent = isMon && !doneToday ? "It's weigh-in day" : "Log your weigh-in";
+  $("nextWeigh").textContent = "Once a week, Monday morning: after the bathroom, before food and drink.";
+  // milestone: next whole kg below now, or the goal if closer
+  if(now && P.goalKg && now>P.goalKg){
+    let mile=Math.ceil(now)-1; if(now-mile<0.15) mile-=1; if(mile<P.goalKg) mile=P.goalKg;
+    $("nMile").textContent=mile.toFixed(mile%1?1:0)+" kg"; $("nMileSub").textContent=(now-mile).toFixed(1)+" kg away"+(mile===P.goalKg?" · your goal":"");
+    const g=goalEstimate();
+    if(g && !g.done && latest){ const target=latest.kg-g.rate*(Math.round((nm-parse(latest.date))/864e5)/7);
+      $("nOnTrack").hidden=false; $("nOnTrack").textContent=`On track for ${nm.toLocaleDateString("en-CA",{weekday:"long"})}: about ${target.toFixed(1)} kg or less. Anything near that counts. Water and your cycle can move the scale ±1 kg.`; }
+    else $("nOnTrack").hidden=true;
+  } else { $("nMile").textContent = P.goalKg&&now&&now<=P.goalKg?"Goal reached":"–"; $("nMileSub").textContent = P.goalKg?"":"set a goal above"; $("nOnTrack").hidden=true; }
+  // trend
   const tape=k=>{ const t=b.filter(x=>x[k]>0); if(!t.length) return ["–",""]; const f=t[0][k], l=t[t.length-1][k], d=l-f; return [l+" cm", t.length>1?(d<=0?"−":"+")+Math.abs(d).toFixed(1)+" since start":"baseline"]; };
   [["waist","bWaist","bWaistSub"],["hips","bHips","bHipsSub"]].forEach(([k,a,s])=>{ const [v,sub]=tape(k); $(a).textContent=v; $(s).textContent=sub; });
   if(w.length>1){ const d=latest.kg-w[w.length-2].kg; $("bWeek").textContent=(d<=0?"−":"+")+Math.abs(d).toFixed(1); } else $("bWeek").textContent="–";
-  // 7-day food averages (days with entries only)
   const days=[]; for(let i=0;i<7;i++){ const d=new Date(); d.setDate(d.getDate()-i); const e=DB.days[iso(d)]; if(e&&e.entries&&e.entries.length) days.push(totals(e.entries)); }
   const avg=k=>days.length?days.reduce((a,t)=>a+t[k],0)/days.length:null;
   $("wK").textContent=days.length?fmt(avg("kcal")):"–"; $("wKSub").textContent=days.length?`${days.length} day${days.length>1?"s":""} logged`:"no logs yet";
   $("wP").textContent=days.length?Math.round(avg("p"))+" g":"–"; $("wPSub").textContent="target "+P.protein+" g";
   $("wF").textContent=days.length?Math.round(avg("fb"))+" g":"–"; $("wFSub").textContent="target "+P.fibre+" g";
-  const nm=nextMonday(), isMon=new Date().getDay()===1, doneToday=DB.body[todayIso()];
-  $("nextWeigh").textContent = isMon&&!doneToday ? "It's Monday: weigh-in day. Morning, after the bathroom, before food." : "Next weigh-in: "+(isMon?"next ":"")+nm.toLocaleDateString("en-CA",{weekday:"long",month:"short",day:"numeric"})+". Once a week is enough.";
-  drawChart(w,P,start); renderGoal("bGoal");
+  drawChart(w,P,start);
   $("bodyList").innerHTML = b.length ? [...b].reverse().map(x=>`<div class="item"><div class="nm" style="cursor:default"><b>${parse(x.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})}</b><small>${[x.waist?"waist "+x.waist:"",x.hips?"hips "+x.hips:""].filter(Boolean).join(" · ")||"weight only"}</small></div><div class="kc">${x.kg?x.kg.toFixed(1)+" kg":"–"}</div><button class="x" data-bd="${esc(x.date)}" aria-label="Delete weigh-in">×</button></div>`).join("")
     : `<div class="empty">No weigh-ins yet.</div>`;
   $("bodyList").querySelectorAll("[data-bd]").forEach(btn=>btn.onclick=()=>armDelete(btn,()=>{ del("body",btn.dataset.bd); renderBody(); }));
 }
+$("gGoal").oninput=()=>{ $("gSave").hidden = parseFloat($("gGoal").value)===plan().goalKg; };
+$("goalForm").onsubmit=e=>{ e.preventDefault(); const g=parseFloat($("gGoal").value); if(!(g>30&&g<250)){ toast("Enter your goal in kg"); return; }
+  const P=plan(); put("settings","plan",{...P,goalKg:g,startKg:P.startKg||latestKg(),startDate:P.startDate||(weighIns()[0]||{}).date||todayIso()}); $("gGoal").blur(); renderAll(); toast("Goal set: "+g+" kg"); };
 function drawChart(w,P,start){
   const svg=$("chart"), W=340,H=170,L=34,R=12,T=14,B=24, css=getComputedStyle(document.documentElement), col=v=>css.getPropertyValue(v).trim();
   if(!w.length){ svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="12" fill="${col("--muted")}">Your weekly weigh-ins appear here</text>`; return; }
@@ -970,9 +1089,35 @@ $("bodyForm").onsubmit=e=>{ e.preventDefault();
 };
 
 /* ================= settings ================= */
-function fillPlan(){ const P=plan(); $("pLow").value=P.kcalLow; $("pHigh").value=P.kcalHigh; $("pProt").value=P.protein; $("pFib").value=P.fibre; $("pStart").value=P.startKg??""; $("pGoal").value=P.goalKg??""; $("pDate").value=P.startDate||""; $("pPace").value=P.pace; }
+function fillPlan(){
+  const P=plan(), u=P.profile||{};
+  $("pLow").value=P.kcalLow; $("pHigh").value=P.kcalHigh; $("pProt").value=P.protein; $("pFib").value=P.fibre; $("pStart").value=P.startKg??""; $("pDate").value=P.startDate||"";
+  $("uSex").value=u.sex||"f"; $("uAge").value=u.age??""; $("uH").value=u.height??""; $("uW").value=latestKg()??u.weight??"";
+  $("uAct").value=String(u.activity||1.55); $("uGoal").value=P.goalKg??""; $("uPace").value=String(P.pace||0.35); $("uBf").value=u.bf||""; $("uProt").value=String(u.prot||1.8);
+}
+let lastCalc=null, lastProfile=null;
+$("profForm").onsubmit=e=>{ e.preventDefault();
+  const u={sex:$("uSex").value,age:+$("uAge").value,height:+$("uH").value,weight:+$("uW").value,activity:+$("uAct").value,pace:+$("uPace").value,bf:+$("uBf").value||0,prot:+$("uProt").value};
+  if(!(u.age>0&&u.height>0&&u.weight>0)){ toast("Fill in age, height and weight"); return; }
+  const c=calcPlan(u); lastCalc=c; lastProfile=u;
+  $("calcOut").hidden=false;
+  $("calcOut").innerHTML=`<div class="calc">
+    <div><small>Eat each day</small><div class="big">${fmt(c.kcalLow)}–${fmt(c.kcalHigh)} kcal</div></div>
+    <table>
+      <tr><td>Protein (${u.prot} g × ${u.weight} kg)</td><td>${c.protein} g</td></tr>
+      <tr><td>Fat (at least 0.8 g/kg, for hormones and thyroid)</td><td>${c.fat} g</td></tr>
+      <tr><td>Carbs (the rest, to fuel lifting)</td><td>${c.carbs} g</td></tr>
+      <tr><td>Fibre (14 g per 1,000 kcal)</td><td>${c.fibre} g</td></tr>
+    </table>
+    <small>Resting burn ${fmt(c.bmr)} kcal (${esc(c.method)}) × activity ${u.activity} = ${fmt(c.formulaTdee)} kcal maintenance.${c.measured?` Your logs and weigh-ins over ${Math.round(c.measured.weeks)} weeks show a real maintenance of ${fmt(c.tdee)} kcal, so Budgie uses that.`:""} A ${c.pace} kg/week pace means about ${fmt(c.deficit)} kcal less a day.${c.pace<u.pace?" Pace capped at 0.7% of your weight per week to protect muscle.":""}</small>
+    <button class="btn" id="usePlan" type="button">Use this plan</button>
+  </div>`;
+  $("usePlan").onclick=()=>{ const P=plan(), goal=parseFloat($("uGoal").value)||P.goalKg;
+    put("settings","plan",{...P,kcalLow:c.kcalLow,kcalHigh:c.kcalHigh,protein:c.protein,fat:c.fat,carbs:c.carbs,fibre:c.fibre,pace:u.pace,goalKg:goal,startKg:P.startKg||u.weight,startDate:P.startDate||todayIso(),profile:u,calc:{bmr:c.bmr,tdee:c.tdee,method:c.method,measured:!!c.measured,on:todayIso()}});
+    renderAll(); $("calcOut").hidden=true; toast("Plan updated: "+fmt(c.kcalLow)+"–"+fmt(c.kcalHigh)+" kcal, "+c.protein+" g protein"); };
+};
 $("planForm").onsubmit=e=>{ e.preventDefault(); const P=plan(), n=(id,d)=>$(id).value===""?d:+$(id).value;
-  put("settings","plan",{...P,kcalLow:n("pLow",P.kcalLow),kcalHigh:n("pHigh",P.kcalHigh),protein:n("pProt",P.protein),fibre:n("pFib",P.fibre),startKg:n("pStart",null),goalKg:n("pGoal",null),startDate:$("pDate").value||null,pace:n("pPace",P.pace)});
+  put("settings","plan",{...P,kcalLow:n("pLow",P.kcalLow),kcalHigh:n("pHigh",P.kcalHigh),protein:n("pProt",P.protein),fibre:n("pFib",P.fibre),fat:null,carbs:null,startKg:n("pStart",null),startDate:$("pDate").value||null});
   renderAll(); toast("Plan saved"); };
 function renderPots(){
   const ps=pots();
