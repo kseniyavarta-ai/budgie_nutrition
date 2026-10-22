@@ -1,4 +1,4 @@
-import { test, expect, todayIso, shiftIso, openAdd, addFromLibrary, synced, entries, SHEET_URL } from "../fixtures.mjs";
+import { test, expect, todayIso, shiftIso, openAdd, addFromLibrary, synced, entries, goTab, SHEET_URL } from "../fixtures.mjs";
 
 test.describe("Food log", () => {
   test("L1 edit an entry's grams", async ({ app, sheet }) => {
@@ -52,7 +52,57 @@ test.describe("Food log", () => {
   });
 });
 
-test.describe("Say (voice or typed)", () => {
+test.describe("Say, Budgie reads it itself (no AI)", () => {
+  async function sayLocal(app, text) {
+    await openAdd(app);
+    await app.click('#modeSeg [data-m="say"]');
+    await app.fill("#sayText", text);
+    await app.click("#aAdd");
+  }
+  test("N1 no AI call; amounts and library foods are understood", async ({ app, sheet }) => {
+    await sayLocal(app, "for breakfast 150 grams of greek yogurt and two eggs");
+    await expect(app.locator("#sayOut .ai-item[data-item]")).toHaveCount(2);
+    await expect(app.locator("#aMeal")).toHaveValue("breakfast");
+    await expect(app.locator("#sayOut")).toContainText("Greek yogurt 2%");
+    await expect(app.locator("#sayOut")).toContainText("Egg, large");
+    await expect(app.locator("#sayOut .ai-total")).toContainText("254 kcal"); // 109.5 + 144
+    expect(sheet.log).not.toContain("ai");
+    await app.click("#aAdd");
+    await expect(app.locator("#addSheet")).toBeHidden();
+    await synced(app);
+    expect(entries(sheet, todayIso()).map(e => [e.name, e.amount])).toEqual([["Greek yogurt 2%", 150], ["Egg, large", 2]]);
+  });
+  test("N2 spoken numbers and units: half a cup of oats, a couple of eggs", async ({ app }) => {
+    await sayLocal(app, "half a cup of rolled oats and a couple of eggs");
+    await expect(app.locator('#sayOut [data-g="0"]')).toHaveValue("80");
+    await expect(app.locator('#sayOut [data-g="1"]')).toHaveValue("2");
+  });
+  test("N3 food not in the library is not saved until you pick one; the pick is remembered", async ({ app, sheet }) => {
+    await sayLocal(app, "two eggs and a bowl of porridge oats and some kombucha");
+    const rows = app.locator("#sayOut .ai-item[data-item]");
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(2)).toContainText("Not in your library");
+    await expect(app.locator("#aAdd")).toHaveText("Add 2 to log");
+    await rows.nth(2).locator("select").selectOption("greek-yogurt");
+    await expect(app.locator("#aAdd")).toHaveText("Add 3 to log");
+    await app.click("#aAdd"); await synced(app);
+    expect(sheet.data.settings.saymap.map.kombucha).toBe("greek-yogurt");
+    await sayLocal(app, "kombucha");
+    await expect(app.locator("#sayOut")).toContainText("Greek yogurt 2%");
+  });
+  test("N4 AI switch: off by default, on sends Say to the AI", async ({ app, sheet }) => {
+    await goTab(app, "settings");
+    await expect(app.locator("#prefSayAI")).not.toBeChecked();
+    await app.check("#prefSayAI"); await synced(app);
+    await goTab(app, "today");
+    await sayLocal(app, "two eggs");
+    await expect(app.locator("#sayOut .ai-item[data-item]")).toHaveCount(3);
+    expect(sheet.log).toContain("ai");
+  });
+});
+
+test.describe("Say (voice or typed), with AI turned on", () => {
+  test.use({ sayAI: true });
   async function say(app, text = "for breakfast 150 grams of greek yogurt, a handful of blueberries and two eggs") {
     await openAdd(app);
     await app.click('#modeSeg [data-m="say"]');
@@ -189,6 +239,7 @@ test.describe("Say (voice or typed)", () => {
 });
 
 test.describe("AI problems are visible", () => {
+  test.use({ sayAI: true });
   test("V13 script crash page: reason and Google's text shown above the button, not hidden", async ({ app, sheet }) => {
     sheet.aiHtml = "<!DOCTYPE html><html><body><div>Exception: You do not have permission to call UrlFetchApp.fetch. Required permissions: https://www.googleapis.com/auth/script.external_request</div></body></html>";
     await app.click("#fab");

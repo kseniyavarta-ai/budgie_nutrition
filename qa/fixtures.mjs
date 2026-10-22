@@ -37,7 +37,8 @@ export async function connectedPage(context, { connected = true } = {}) {
 }
 
 export const test = base.extend({
-  sheet: async ({}, use) => { await use(new FakeSheet()); },
+  sayAI: [false, { option: true }],   // turn on "Use AI for Say" in the seeded settings
+  sheet: async ({ sayAI }, use) => { const sh = new FakeSheet(); if (sayAI) sh.data.settings.prefs = { sayAI: true }; await use(sh); },
   app: async ({ context, sheet }, use) => {
     await wire(context, sheet);
     const page = await connectedPage(context);

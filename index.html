@@ -151,6 +151,7 @@ textarea{resize:vertical;min-height:60px}
 #aAdd{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:2;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 .ai-item input[type=checkbox]{width:auto}
 .ai-item small{display:block;color:var(--muted);font-size:.78rem}
+.pickfood{margin-top:6px;font-size:14px;padding:6px 8px}
 .ai-item .mac{color:var(--ink);font-variant-numeric:tabular-nums;font-size:.8rem;margin-top:2px}
 .ai-item.off{opacity:.45}
 .ai-head{padding:8px 10px;font-weight:700;font-size:.86rem;background:var(--soft,rgba(0,0,0,.03))}
@@ -393,6 +394,7 @@ details summary{list-style:none}
         <button class="btn" id="cSave">Save and test</button>
         <button class="btn ghost" id="cSync">Sync now</button>
       </div>
+      <label class="chk"><input type="checkbox" id="prefSayAI"> Use AI for 🎤 Say (needs an AI key in your Sheet). Off: Budgie reads it itself from your library, free.</label>
       <button class="btn ghost" id="cTestAI" type="button">Test AI (photos and 🎤 Say)</button>
       <div class="alert" id="aiTestOut" hidden></div>
       <button class="btn ghost" id="cCode">Copy setup code for another device</button>
@@ -442,7 +444,7 @@ details summary{list-style:none}
       <div id="sayIn" style="display:grid;gap:10px">
       <button class="btn mic" id="sayMic" type="button" hidden>🎤 Tap and tell me what you ate</button>
       <label><span id="sayLbl">What did you eat?</span><textarea id="sayText" rows="3" placeholder="e.g. two eggs, 50 grams of avocado and one cottage cheese bagel, about 85 grams"></textarea></label>
-      <p class="note" id="sayTip">Tip: tap the 🎤 on your keyboard and just talk. Say amounts when you know them; I'll estimate the rest.</p>
+      <p class="note" id="sayTip">Tip: tap the 🎤 on your keyboard and just talk, like “50 grams of avocado and two eggs”. Budgie matches it to your foods.</p>
       <button class="btn ghost" id="sayGo" hidden>Understand it</button>
       </div>
       <div class="alert" id="sayNote" hidden></div>
@@ -540,7 +542,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · ai-check";
+const VERSION = "v2026.10.22 · say-free";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -845,7 +847,7 @@ function updAdd(){
   $("aAdd").textContent = editing?"Save changes":((MODE==="photo"||MODE==="say")&&aiItems.length? "Add "+aiItems.filter(i=>i.on).length+" to log" : MODE==="say"&&$("sayText").value.trim() ? "Check what I said" : "Add to log");
 }
 $("aAdd").onclick=()=>{
-  if(MODE==="say" && !aiItems.length){ understandSay(); return; }
+  if(MODE==="say" && (!aiItems.length || $("sayOut").hidden || sayStartedAt>=addDownAt)){ understandSay(); return; } // the tap that reads it only shows the review; the next tap saves
   const meal=$("aMeal").value, cur=dayEntries();
   let add=[];
   if(MODE==="lib"){
@@ -914,16 +916,151 @@ function renderAiItems(){
   out.innerHTML = aiItems.length
     ? `<div class="ai-head">Check it, then tap Add. Nothing is in your log yet.</div>`
       + aiItems.map((i,n)=>{ const v=aiItemVals(i), f=i.libraryId&&DB.foods[i.libraryId], unit=f&&f.basis==="unit";
-        return `<div class="ai-item${i.on?"":" off"}" data-item="${n}"><input type="checkbox" data-n="${n}" ${i.on?"checked":""} aria-label="Include ${esc(f?f.name:i.name)}"><div><b>${esc(f?f.name:i.name)}</b><small class="mac">${macLine(v)}</small><small>${f?"from your library":"estimated"}${unit&&f.pieceG?" · "+fmt(i.pieces*f.pieceG)+" g":""}</small></div><label style="font-size:.72rem">${unit?(f.unit||"pieces"):"grams"}<input type="text" data-g="${n}" value="${unit?(i.pieces||""):(i.grams||"")}" inputmode="decimal" aria-label="${unit?"How many":"Grams"} of ${esc(f?f.name:i.name)}"></label></div>`;}).join("")
+        const chooser = (i.unmatched||i.close) ? `<select class="pickfood" data-pick="${n}" aria-label="Choose the food for ${esc(i.said||i.name)}"><option value="">${i.unmatched?"Pick the food you meant…":"Not right? Pick another…"}</option>${candidatesFor(i.said||i.name).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}<option disabled>──────────</option>${foodsSorted("").map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select>` : "";
+        if(i.unmatched) return `<div class="ai-item off" data-item="${n}"><input type="checkbox" data-n="${n}" disabled aria-label="Not in your library"><div><b>“${esc(i.said||i.name)}”</b><small>Not in your library yet. Pick it below, or add it later in Foods.</small>${chooser}</div><span></span></div>`;
+        return `<div class="ai-item${i.on?"":" off"}" data-item="${n}"><input type="checkbox" data-n="${n}" ${i.on?"checked":""} aria-label="Include ${esc(f?f.name:i.name)}"><div><b>${esc(f?f.name:i.name)}</b><small class="mac">${macLine(v)}</small><small>${f?(i.close?"closest match for “"+esc(i.said)+"”":"from your library"):"estimated"}${unit&&f.pieceG?" · "+fmt(i.pieces*f.pieceG)+" g":""}</small>${chooser}</div><label style="font-size:.72rem">${unit?(f.unit||"pieces"):"grams"}<input type="text" data-g="${n}" value="${unit?(i.pieces||""):(i.grams||"")}" inputmode="decimal" aria-label="${unit?"How many":"Grams"} of ${esc(f?f.name:i.name)}"></label></div>`;}).join("")
       + `<div class="ai-total"><b>Total: ${macLine(tot)}</b></div>`
     : (MODE==="say"?"":`<div class="empty">I couldn't spot any food. Try another photo or add a note.</div>`);
   out.hidden = !out.innerHTML;
   out.querySelectorAll("[data-n]").forEach(c=>c.onchange=()=>{ aiItems[c.dataset.n].on=c.checked; renderAiItems(); });
+  out.querySelectorAll("[data-pick]").forEach(sel=>sel.onchange=()=>{ if(!sel.value) return; pickFoodFor(aiItems[sel.dataset.pick],sel.value); renderAiItems(); });
   out.querySelectorAll("[data-g]").forEach(inp=>inp.onchange=()=>{ const i=aiItems[inp.dataset.g], g=parseFloat(String(inp.value).replace(",","."))||0, f=i.libraryId&&DB.foods[i.libraryId];
     if(f&&f.basis==="unit"){ i.pieces=g; }
     else { if(!f && i.grams>0){ const s=g/i.grams; NUT.forEach(k=>i[k]=(+i[k]||0)*s); } i.grams=g; }
     renderAiItems(); });
   updAdd();
+}
+
+/* ----- Budgie's own reader for "Say" (no AI): numbers, units, your library ----- */
+const NUMW={zero:0,a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90,couple:2,few:3,dozen:12};
+const UNIT_RE=/^(g|gr|grams?|gs|kg|kilos?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|oz|ounces?|cups?|tbsp|tbs|tablespoons?|tsp|teaspoons?|slices?|pieces?|pcs|handfuls?|bowls?|scoops?|servings?|portions?|cans?|glass(?:es)?|spoons?|pumps?|squares?|wedges?|fillets?|cloves?)$/;
+const FILLER=new Set("i i've ive i'm im just had have has ate eaten eat eating some of about around approximately roughly like maybe little bit also my the it on top for got then so um uh okay ok and or with plus today this morning tonight yesterday".split(" "));
+const NAME_SKIP=new Set("raw cooked weight weighed by per with the and of label estimate check recipe medium large small batch plain fresh homemade baked boiled skin on skinless boneless bone only no".split(" "));
+const SYN={toast:"bread",toasts:"bread",yoghurt:"yogurt",yogourt:"yogurt",yoghurts:"yogurt",avo:"avocado",avocados:"avocado",evoo:"olive",oatmeal:"oats",porridge:"oats",mince:"ground",minced:"ground",tomatoes:"tomato",potatoes:"potato",berries:"berry",cukes:"cucumber",capsicum:"pepper",courgette:"zucchini",aubergine:"eggplant",pb:"peanut",choc:"chocolate",steelhead:"salmon",lox:"salmon",cottage:"cottage",bagels:"bagel",prune:"prunes",chickpea:"chickpeas"};
+const sing=w=>{ if(SYN[w]) return SYN[w]; if(w.length>4&&w.endsWith("ies")) return w.slice(0,-3)+"y"; if(w.length>4&&/(ches|shes|oes)$/.test(w)) return w.slice(0,-2); if(w.length>3&&w.endsWith("s")&&!w.endsWith("ss")) return w.slice(0,-1); return w; };
+const nameTokens=f=>(f._tok||(f._tok=String(f.name).toLowerCase().replace(/[^a-z0-9%\s-]/g," ").split(/[\s-]+/).filter(w=>w&&!NAME_SKIP.has(w)).map(sing)));
+function wordsToNumbers(t){
+  const toks=t.split(/\s+/), out=[]; let i=0;
+  while(i<toks.length){
+    const w=toks[i];
+    if(w in NUMW && !(w==="a"||w==="an") || /^\d+(\.\d+)?$/.test(w)){
+      let n=/^\d/.test(w)?parseFloat(w):NUMW[w]; i++;
+      while(i<toks.length){ const x=toks[i];
+        if(x==="hundred"){ n*=100; i++; continue; }
+        if(x in NUMW && x!=="a" && x!=="an" && n>=100 && n%100===0 && NUMW[x]<100){ n+=NUMW[x]; i++; continue; }
+        if(x==="and" && toks[i+1] in NUMW && toks[i+1]!=="a"){ i++; continue; }
+        if(x==="and" && toks[i+1]==="a" && toks[i+2]==="half"){ n+=0.5; i+=3; continue; }
+        if(x==="and" && toks[i+1]==="a" && toks[i+2]==="quarter"){ n+=0.25; i+=3; continue; }
+        if(x in NUMW && NUMW[x]<10 && n>=20 && n%10===0){ n+=NUMW[x]; i++; continue; }
+        break; }
+      out.push(String(n)); continue;
+    }
+    if((w==="a"||w==="an") && (toks[i+1]==="half"||toks[i+1]==="quarter")){ out.push(toks[i+1]==="half"?"0.5":"0.25"); i+=2; if(toks[i]==="of") i++; continue; }
+    if(w==="half"){ out.push("0.5"); i++; if(toks[i]==="a"||toks[i]==="an") i++; continue; }
+    if(w==="quarter"){ out.push("0.25"); i++; if(toks[i]==="of") i++; continue; }
+    if((w==="a"||w==="an") && (toks[i+1]==="couple"||toks[i+1]==="few"||toks[i+1]==="dozen")){ out.push(String(NUMW[toks[i+1]])); i+=2; if(toks[i]==="of") i++; continue; }
+    out.push(w); i++;
+  }
+  return out.join(" ");
+}
+const sayKey=p=>String(p).toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+const sayMap=()=>(DB.settings.saymap&&DB.settings.saymap.map)||{};
+const unitMatches=(f,unit)=>!!unit&&!!f.unit&&(sing(f.unit)===sing(unit)||({tablespoon:"tbsp",tbs:"tbsp",teaspoon:"tsp"})[sing(unit)]===f.unit);
+function matchFood(phrase,unit){
+  const remembered=sayMap()[sayKey(phrase)]; if(remembered&&DB.foods[remembered]) return {f:DB.foods[remembered],full:true};
+  const raw=phrase.split(/\s+/).filter(Boolean), neg=[]; const kept=[];
+  for(let k=0;k<raw.length;k++){ if((raw[k]==="no"||raw[k]==="without")&&raw[k+1]){ neg.push(sing(raw[k+1])); k++; continue; } kept.push(raw[k]); }
+  const q=kept.filter(w=>!FILLER.has(w)&&!NAME_SKIP.has(w)&&w!=="a"&&w!=="an").map(sing); if(!q.length) return null;
+  const head=q[q.length-1], rec=new Set(recentFoods(30).map(f=>f.id));
+  let best=null, bestS=0;
+  Object.values(DB.foods).forEach(f=>{
+    const ft=nameTokens(f); if(!ft.length) return;
+    const has=w=>ft.some(t=>t===w||(w.length>=4&&(t.startsWith(w)||w.startsWith(t))&&Math.min(t.length,w.length)>=4));
+    const hits=q.filter(has).length; if(!hits) return;
+    const headHit=has(head);
+    if(!headHit && hits/q.length<0.6) return;
+    let s=hits+(headHit?2:0)-0.15*Math.max(0,ft.length-hits);
+    if(ft[0]===q[0]) s+=0.3; if(f.fav) s+=0.3; if(rec.has(f.id)) s+=0.6; if(unitMatches(f,unit)) s+=1;
+    const lname=String(f.name).toLowerCase();
+    neg.forEach(x=>{ if(new RegExp("(no|without) "+x).test(lname)) s+=1.5; else if(ft.includes(x)) s-=2; });
+    if(s>bestS){ bestS=s; best={f,full:hits===q.length&&headHit}; }
+  });
+  return best;
+}
+const PORTION={slice:35,chocolate:5,egg:50,avocado:150,banana:118,apple:182,pear:178,orange:131,kiwi:69,date:24,bagel:85,bread:35,toast:35,tomato:120,potato:170,carrot:61,pepper:120,onion:110,cucumber:200,zucchini:200,lemon:58,clove:5,mushroom:18,chicken:120,salmon:120,steak:150,breast:170,thigh:100,fillet:140,tortilla:45,cake:9,muffin:110,cookie:15,square:10};
+const GROUP_DEFAULT={"Protein":120,"Dairy":150,"Vegetables":80,"Fruit":120,"Grains & starches":150,"Legumes":130,"Nuts & seeds":28,"Fats & oils":10,"Pantry":10,"Sweets & treats":25,"Drinks":250,"Recipes":250,"Other":100};
+function portionG(f,words){ for(const w of [...words].reverse()){ const k=sing(w); if(PORTION[k]) return PORTION[k]; } return GROUP_DEFAULT[f.group||"Other"]||100; }
+function unitToG(f,qty,unit,words){
+  const g=f.group||"", leafy=/spinach|lettuce|arugula|greens|kale|spring mix|romaine/i.test(f.name), fat=g==="Fats & oils"||/oil|butter|mayo/i.test(f.name);
+  switch(true){
+    case /^(g|gr|grams?|gs)$/.test(unit): return qty;
+    case /^(kg|kilos?)$/.test(unit): return qty*1000;
+    case /^(ml|millilit)/.test(unit): return qty;
+    case /^(l|lit)/.test(unit): return qty*1000;
+    case /^(oz|ounce)/.test(unit): return qty*28.35;
+    case /^cup/.test(unit): return qty*(leafy?30:g==="Grains & starches"||g==="Legumes"?160:g==="Fruit"?150:g==="Vegetables"?90:g==="Dairy"?245:g==="Nuts & seeds"?140:g==="Drinks"?240:150);
+    case /^(tbsp|tbs|tablespoon|spoon)/.test(unit): return qty*(fat?13.5:/peanut|nut butter|almond butter/i.test(f.name)?16:/honey|syrup|maple/i.test(f.name)?21:15);
+    case /^(tsp|teaspoon)/.test(unit): return qty*(fat?4.5:5);
+    case /^handful/.test(unit): return qty*(leafy?30:g==="Fruit"?75:28);
+    case /^bowl/.test(unit): return qty*(leafy?60:250);
+    case /^scoop/.test(unit): return qty*30;
+    case /^(can)/.test(unit): return qty*(g==="Legumes"?240:/tuna/i.test(f.name)?120:400);
+    case /^glass/.test(unit): return qty*250;
+    case /^(slice|piece|pcs|serving|portion|square|wedge|fillet|clove|pump)/.test(unit): return qty*(f.pieceG||portionG(f,[unit.replace(/s$/,""),...words]));
+    default: return qty*(f.pieceG||portionG(f,words));
+  }
+}
+function amountFor(f,qty,unit,words){
+  const notes=[];
+  if(f.basis==="unit"){
+    if(unit && !unitMatches(f,unit) && f.pieceG && !/^(piece|pcs)/.test(unit)) return {pieces:Math.max(0.5,Math.round(unitToG(f,qty,unit,words)/f.pieceG*2)/2),grams:0,notes};
+    return {pieces:qty||1,grams:0,notes};
+  }
+  if(qty==null && !unit){ const g=f.pieceG||portionG(f,words); notes.push(`assumed ${Math.round(g)} g of ${f.name}`); return {grams:Math.round(g),pieces:null,notes}; }
+  const g=unitToG(f,qty==null?1:qty,unit||"",words);
+  if(!unit || !/^(g|gr|grams?|gs|kg|kilos?|ml|oz|ounces?)$/.test(unit)) notes.push(`${qty==null?1:qty}${unit?" "+unit:""} ${f.name} ≈ ${Math.round(g)} g`);
+  return {grams:Math.round(g),pieces:null,notes};
+}
+function localParse(text){
+  let t=" "+String(text).toLowerCase().replace(/½/g," 0.5 ").replace(/¼/g," 0.25 ").replace(/¾/g," 0.75 ").replace(/(\d)\s*\/\s*2\b/g,(m,a)=>String(a/2)).replace(/(\d)\s*\/\s*4\b/g,(m,a)=>String(a/4))
+    .replace(/(\d)(g|kg|ml|oz|gr)\b/g,"$1 $2").replace(/[“”"!?]/g," ").replace(/\s+/g," ")+" ";
+  let meal=null;
+  const mm=t.match(/\b(breakfast|lunch|dinner|supper|dessert|snack)\b/); if(mm) meal={breakfast:"breakfast",lunch:"lunch",dinner:"dinner",supper:"dinner",dessert:"dessert",snack:"other"}[mm[1]];
+  t=t.replace(/\b(for|at|as|with|from|my)\s+(a\s+)?(breakfast|lunch|dinner|supper|dessert|snack)\b/g," , ").replace(/\b(breakfast|lunch|dinner|supper|dessert|snack)\b/g," ");
+  t=wordsToNumbers(t.replace(/[.;]/g," , ").replace(/\s+/g," ").trim());
+  const chunks=t.split(/\s*,\s*|\s+(?:and then|then|and|plus|with|also|on top of|on it|on top)\s+/).map(s=>s.trim()).filter(Boolean);
+  const items=[], notes=[];
+  chunks.forEach(ch=>{
+    const w=ch.split(/\s+/); let qty=null, unit=null; const rest=[];
+    for(let k=0;k<w.length;k++){
+      if(qty==null && /^\d+(\.\d+)?$/.test(w[k])){ qty=parseFloat(w[k]); if(w[k+1]&&UNIT_RE.test(w[k+1])){ unit=w[k+1]; k++; } continue; }
+      if(qty==null && (w[k]==="a"||w[k]==="an") && rest.length===0){ qty=1; if(w[k+1]&&UNIT_RE.test(w[k+1])){ unit=w[k+1]; k++; } continue; }
+      if(!unit && UNIT_RE.test(w[k]) && rest.length===0 && qty==null){ unit=w[k]; continue; }
+      rest.push(w[k]);
+    }
+    const words=rest.filter(x=>!FILLER.has(x)&&!/^\d/.test(x)&&x!=="a"&&x!=="an");
+    if(!words.length) return;
+    const phrase=words.join(" "), m=matchFood(phrase,unit);
+    if(m){
+      const a=amountFor(m.f,qty,unit,words); notes.push(...a.notes);
+      if(!m.full) notes.push(`"${phrase}" → closest match ${m.f.name}`);
+      items.push({name:m.f.name,libraryId:m.f.id,grams:a.grams,pieces:a.pieces,on:true,said:phrase,qty,unit,close:!m.full,kcal:0,p:0,c:0,f:0,fb:0});
+    } else {
+      items.push({name:phrase,libraryId:null,grams:0,pieces:null,on:false,said:phrase,qty,unit,unmatched:true,kcal:0,p:0,c:0,f:0,fb:0});
+    }
+  });
+  return {meal,items,note:notes.join(" · ")};
+}
+function pickFoodFor(i,id){
+  const f=DB.foods[id]; if(!f) return;
+  if(i.said){ const map={...sayMap(),[sayKey(i.said)]:id}; put("settings","saymap",{map}); }
+  const a=amountFor(f,i.qty,i.unit,String(i.said||"").split(/\s+/));
+  Object.assign(i,{libraryId:f.id,name:f.name,grams:a.grams,pieces:a.pieces,on:true,unmatched:false,close:false});
+}
+function candidatesFor(phrase){
+  const q=String(phrase).toLowerCase().split(/\s+/).map(sing).filter(w=>w.length>2);
+  const sc=f=>{ const ft=nameTokens(f); return q.filter(w=>ft.some(t=>t.includes(w.slice(0,4))||w.includes(t.slice(0,4)))).length; };
+  return Object.values(DB.foods).map(f=>[f,sc(f)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]||a[0].name.localeCompare(b[0].name)).slice(0,8).map(x=>x[0]);
 }
 
 /* ----- say it (voice or typed) ----- */
@@ -933,7 +1070,8 @@ Match each food to the user's library when it is clearly the same food (library 
 For every item also give kcal, protein p, carbs c, fat f and fibre fb in grams FOR THAT PORTION.
 If the person says which meal it was (breakfast, lunch, dinner, dessert, snack), return it as "meal" (breakfast|lunch|dinner|dessert|other), otherwise null.
 Return ONLY JSON: {"meal":null,"items":[{"name":"","grams":0,"pieces":null,"libraryId":null,"kcal":0,"p":0,"c":0,"f":0,"fb":0}],"note":"one short sentence about anything you assumed"}`;
-let lastSaid="", sayBusy=null;
+let lastSaid="", sayBusy=null, sayStartedAt=0, addDownAt=0;
+$("aAdd").addEventListener("pointerdown",()=>{ addDownAt=Date.now(); });
 function sayNoteSet(t,err){ const b=$("sayNote"); b.hidden=!t; b.className="alert"+(err?" err":""); b.textContent=t; if(t&&err) requestAnimationFrame(()=>b.scrollIntoView({block:"center"})); }
 function sayShowInput(){ $("sayIn").hidden=false; $("sayIn").style.display="grid"; $("sayEdit").hidden=true; }
 function sayShowReview(){ $("sayIn").hidden=true; $("sayIn").style.display="none"; $("sayEdit").hidden=false; $("addSheet").querySelector(".in").scrollTop=0; }
@@ -943,18 +1081,20 @@ function understandSay(){
   if(text===lastSaid && aiItems.length){ sayShowReview(); return Promise.resolve(); }
   const b=$("sayGo"); b.disabled=true; b.innerHTML='<span class="spin"></span>Understanding…';
   $("aAdd").disabled=true; $("aAdd").innerHTML='<span class="spin"></span>Reading what you said…';
-  sayNoteSet("");
-  sayBusy=(async()=>{
+  sayNoteSet(""); sayStartedAt=Date.now();
+  const run=(async()=>{
     try{
-      const j=await askAI(SAY_SYS,"User's library:\n"+libraryIndex()+"\n\nWhat they said:\n"+text,[]);
+      const useAI = !!(DB.settings.prefs && DB.settings.prefs.sayAI);
+      const j = useAI ? await askAI(SAY_SYS,"User's library:\n"+libraryIndex()+"\n\nWhat they said:\n"+text,[]) : localParse(text);
       if(MODE!=="say") return;
-      aiItems=(j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
+      aiItems = useAI ? (j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true})) : j.items;
       if(j.meal && !editing) $("aMeal").value=j.meal;
       lastSaid=text; sayNoteSet(j.note||""); renderAiItems();
       if(aiItems.length) sayShowReview(); else { sayNoteSet("I couldn't find any food in that. Try saying it again with amounts.",true); }
     }catch(e){ console.warn(e); showAiErr("sayNote",e); }
-    finally{ sayBusy=null; b.disabled=false; b.textContent="Understand again"; updAdd(); }
+    finally{ b.disabled=false; b.textContent="Understand again"; updAdd(); }
   })();
+  sayBusy=run; run.finally(()=>{ if(sayBusy===run) sayBusy=null; });
   return sayBusy;
 }
 // keyboard dictation: when you tap Done (or stop talking for a few seconds), read it automatically
@@ -1275,7 +1415,8 @@ $("bodyForm").onsubmit=e=>{ e.preventDefault();
 };
 
 /* ================= settings ================= */
-function fillPlan(){
+function fillPrefs(){ $("prefSayAI").checked=!!(DB.settings.prefs&&DB.settings.prefs.sayAI); }
+function fillPlan(){ fillPrefs();
   const P=plan(), u=P.profile||{};
   if(!dirtyForms.has("planForm")){ $("pLow").value=P.kcalLow; $("pHigh").value=P.kcalHigh; $("pProt").value=P.protein; $("pFib").value=P.fibre; $("pStart").value=P.startKg??""; $("pDate").value=P.startDate||""; }
   if(dirtyForms.has("profForm")) return;
@@ -1320,6 +1461,7 @@ async function connect(url,token){
 $("cSave").onclick=async()=>{ const b=$("cSave"); b.disabled=true; b.innerHTML='<span class="spin"></span>Testing…';
   try{ await connect($("cUrl").value,$("cTok").value.trim()); toast("Connected to your Sheet"); }catch(e){ toast(connErr(e)); }
   b.disabled=false; b.textContent="Save and test"; };
+$("prefSayAI").onchange=()=>{ put("settings","prefs",{...(DB.settings.prefs||{}),sayAI:$("prefSayAI").checked}); toast($("prefSayAI").checked?"Say will use AI":"Say reads it itself, no AI"); };
 $("cTestAI").onclick=async()=>{
   const b=$("cTestAI"), out=$("aiTestOut"); b.disabled=true; b.innerHTML='<span class="spin"></span>Testing…'; out.hidden=true;
   const t0=Date.now();

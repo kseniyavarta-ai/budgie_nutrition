@@ -24,6 +24,15 @@ Tests run against a **fake Google Sheet** (an in-memory copy of `apps-script/Cod
 | L4 | Quick entry | Name + kcal → Add → saved with the numbers typed |
 | L5 | Another day | ‹ to yesterday → add → saved under yesterday's date, today untouched |
 
+## 🎤 Say without AI (Budgie reads it itself, default)
+
+| ID | Case | Pass when |
+|---|---|---|
+| N1 | Library foods + grams | "for breakfast 150 grams of greek yogurt and two eggs" → 2 rows from the library, meal = breakfast, total right, no AI call, saved after Add |
+| N2 | Spoken numbers/units | "half a cup of rolled oats and a couple of eggs" → 80 g oats, 2 eggs |
+| N3 | Unknown food | Unknown food shows "Not in your library", isn't saved; picking a food adds it and is remembered next time |
+| N4 | AI switch | Off by default; turning it on in Settings makes Say use the AI |
+
 ## 🎤 Say (voice or typed)
 
 | ID | Case | Pass when |
