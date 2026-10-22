@@ -17,8 +17,10 @@
 <style>
 /* Budgie — one phone-width column, sticky header with tabs, bottom sheets for adding and editing */
 :root{
-  --bg:#F4F7FA; --surface:#FFFFFF; --ink:#16202A; --muted:#5B6976; --line:#DAE2EA;
-  --accent:#2C6FB7; --accent-ink:#FFFFFF; --soft:#E4EEF8; --cere:#E3B23C;
+  --bg:#F1F7FD; --surface:#FFFFFF; --ink:#16202A; --muted:#5B6976; --line:#D8E3EE;
+  --accent:#2C6FB7; --accent-ink:#FFFFFF; --soft:#E2EEFA; --cere:#E3B23C;
+  --sun:#F4C430; --sun-ink:#3A2C00; --sun-soft:#FFF4CF; --leaf:#3FA34D; --leaf-soft:#E2F4E2;
+  --m-breakfast:#E9A800; --m-lunch:#3FA34D; --m-dinner:#2C6FB7; --m-dessert:#E2668E; --m-other:#8A6FD1;
   --prot:#6A4C9C; --carb:#B97C10; --fat:#2D8A8A; --fibre:#4E8A3A;
   --over:#B23B3B; --ok:#2E7D4F;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
@@ -27,8 +29,10 @@
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#0F151B; --surface:#172029; --ink:#E5ECF2; --muted:#9AA8B5; --line:#283440;
+  --bg:#0E151C; --surface:#172029; --ink:#E5ECF2; --muted:#9AA8B5; --line:#283440;
   --accent:#6FA8E6; --accent-ink:#0B1218; --soft:#1C2A37; --cere:#E8C25E;
+  --sun:#F4C430; --sun-ink:#2A2000; --sun-soft:#3A3115; --leaf:#6CCB78; --leaf-soft:#18301D;
+  --m-breakfast:#F4C430; --m-lunch:#6CCB78; --m-dinner:#6FA8E6; --m-dessert:#F28BAD; --m-other:#B39DF0;
   --prot:#B49AE0; --carb:#E2B04F; --fat:#6CC4C4; --fibre:#8CC478; --over:#EE7B7B; --ok:#6CCB92;
   color-scheme:dark}}
 *{box-sizing:border-box}
@@ -46,7 +50,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .brand small.warn{color:var(--over)}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--soft);border-radius:10px;padding:3px;gap:3px}
 .tabs button{border:0;background:transparent;color:var(--muted);font:700 .88rem var(--body);padding:8px 0;border-radius:8px;cursor:pointer}
-.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--accent);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 button{font-family:var(--body)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .datebar{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -71,9 +75,17 @@ section{display:grid;gap:14px;margin-top:14px}
 .m .row b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
 .m .bar{height:6px;border-radius:3px;background:var(--soft);overflow:hidden}
 .m .bar i{display:block;height:100%;border-radius:3px}
+.feather{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--sun) 0 33%,var(--leaf) 33% 66%,var(--accent) 66%);margin:-4px 0 2px}
 .meal{display:grid;gap:6px}
+.meal h3 .chip{display:inline-flex;align-items:center;gap:8px}
+.meal h3 .chip::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--mc,var(--accent))}
+.meal .list{border-top:3px solid var(--mc,var(--line))}
+.star{border:0;background:transparent;font-size:1.15rem;width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--line)}
+.star[aria-pressed="true"]{color:var(--sun)}
+.pick .sec{padding:6px 12px;font:700 .72rem var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);border-top:1px solid var(--line)}
+.pick .sec:first-child{border-top:0}
 .meal h3{display:flex;justify-content:space-between;align-items:baseline;margin:0;font:700 1.02rem var(--display)}
-.meal h3 span{font:500 .82rem var(--mono);color:var(--muted)}
+.meal h3>span:last-child{font:500 .82rem var(--mono);color:var(--muted)}
 .list{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
 .item:first-child{border-top:0}
@@ -87,7 +99,7 @@ section{display:grid;gap:14px;margin-top:14px}
 .empty{padding:14px 12px;color:var(--muted);font-size:.9rem}
 .note{font-size:.88rem;color:var(--muted);background:var(--soft);border-radius:10px;padding:10px 12px;margin:0}
 .tag{display:inline-block;font:500 .7rem var(--mono);color:var(--accent);background:var(--soft);border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:1px}
-.fab{position:fixed;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:6;border:0;background:var(--accent);color:var(--accent-ink);font:700 1rem var(--body);padding:14px 20px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
+.fab{position:fixed;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:6;border:0;background:var(--sun);color:var(--sun-ink);font:700 1rem var(--body);padding:14px 20px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .stat{display:grid;gap:2px;min-width:0}
 .stat span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -139,6 +151,10 @@ textarea{resize:vertical;min-height:60px}
 .setup img{width:88px;height:88px;border-radius:22px}
 .setup h1{font:700 2rem/1.05 var(--display);margin:0}
 .setup p{margin:0;color:var(--muted)}
+.goal{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--leaf-soft);border-radius:12px;padding:10px 12px}
+.goal b{font:700 1.5rem/1 var(--display);font-variant-numeric:tabular-nums;color:var(--leaf)}
+.goal span{font-size:.85rem;color:var(--muted)}
+.goal .r{text-align:right}
 .ver{font:400 .75rem var(--mono);color:var(--muted);text-align:center}
 </style>
 </head>
@@ -150,6 +166,7 @@ textarea{resize:vertical;min-height:60px}
     <img src="icon-192.png" alt="">
     <h1>Hi, I'm Budgie.</h1>
     <p>Connect your Google Sheet once. The link and token stay on this phone and are never part of the app's code.</p>
+    <label>Setup code from another device (optional)<input id="sCode" autocomplete="off" placeholder="Paste it here to fill both boxes"></label>
     <label>Web app URL<input id="sUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></label>
     <label>Token (your BUDGIE_TOKEN)<input id="sTok" type="password" autocomplete="off"></label>
     <button class="btn" id="sGo">Connect</button>
@@ -182,12 +199,14 @@ textarea{resize:vertical;min-height:60px}
   <!-- TODAY -->
   <section id="v-today">
     <div class="card">
+      <div class="feather" aria-hidden="true"></div>
       <div class="kcal">
         <div class="big" id="kEaten">0<small> kcal eaten</small></div>
         <div class="left">left in range<b id="kLeft">–</b></div>
       </div>
       <div class="track"><i id="kBar" style="width:0"></i><span class="band" id="kBand"></span></div>
       <div class="macros" id="macros"></div>
+      <div class="goal" id="tGoal" hidden></div>
     </div>
     <div id="meals" style="display:grid;gap:14px"></div>
     <p class="note">Dessert is part of dinner. After it, the kitchen closes.</p>
@@ -202,6 +221,7 @@ textarea{resize:vertical;min-height:60px}
         <div class="stat"><span>Lost</span><b id="bLost">–</b><small id="bLostSub"></small></div>
         <div class="stat"><span>To go</span><b id="bToGo">–</b><small id="bToGoSub"></small></div>
       </div>
+      <div class="goal" id="bGoal" hidden></div>
       <svg class="chart" id="chart" viewBox="0 0 340 170" role="img" aria-label="Weekly weight"></svg>
       <div class="stats">
         <div class="stat"><span>Waist</span><b id="bWaist">–</b><small id="bWaistSub"></small></div>
@@ -245,6 +265,7 @@ textarea{resize:vertical;min-height:60px}
       <button aria-pressed="true" data-f="all">All</button>
       <button aria-pressed="false" data-f="recipes">Recipes</button>
       <button aria-pressed="false" data-f="foods">Foods</button>
+      <button aria-pressed="false" data-f="fav">★</button>
     </div>
     <div class="list" id="foodList"></div>
     <p class="note">Values are per 100 g, or per piece for things you count. Recipes are per 100 g of the cooked dish: weigh your bowl and log it.</p>
@@ -261,7 +282,8 @@ textarea{resize:vertical;min-height:60px}
         <label>Fibre (g)<input type="number" id="pFib" inputmode="numeric"></label>
         <label>Start weight (kg)<input type="number" id="pStart" step="0.1" inputmode="decimal"></label>
         <label>Goal weight (kg)<input type="number" id="pGoal" step="0.1" inputmode="decimal"></label>
-        <label class="full">Start date<input type="date" id="pDate"></label>
+        <label>Start date<input type="date" id="pDate"></label>
+        <label>Planned pace (kg/week)<input type="number" id="pPace" step="0.05" inputmode="decimal"></label>
         <button class="btn full" type="submit">Save plan</button>
       </form>
     </div>
@@ -283,6 +305,8 @@ textarea{resize:vertical;min-height:60px}
         <button class="btn" id="cSave">Save and test</button>
         <button class="btn ghost" id="cSync">Sync now</button>
       </div>
+      <button class="btn ghost" id="cCode">Copy setup code for another device</button>
+      <p class="note">Each browser remembers the connection on its own. On iPhone, the Home Screen app and Safari count as two, so connect inside the Home Screen app.</p>
     </div>
     <div class="card">
       <h2>Your data</h2>
@@ -369,6 +393,7 @@ textarea{resize:vertical;min-height:60px}
       <label>Fibre g<input type="number" id="fFb" step="any" inputmode="decimal"></label>
       <label>Grams per piece<input type="number" id="fPieceG" step="any" inputmode="decimal" placeholder="optional"></label>
       <label class="full">Notes<input id="fNote" placeholder="Source, brand, label date"></label>
+      <label class="chk full"><input type="checkbox" id="fFav"> ★ Favourite (shows first when adding food)</label>
       <button class="btn full" type="submit">Save food</button>
     </form>
     <button class="btn danger" id="fDel" hidden>Delete food</button>
@@ -408,10 +433,10 @@ textarea{resize:vertical;min-height:60px}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · connect-help";
+const VERSION = "v2026.10.22 · feathers";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
-const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null};
+const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
 const r1 = n => Math.round((+n||0)*10)/10;
 const fmt = n => Math.round(+n||0).toLocaleString("en-CA");
 const iso = d => { const z=new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,10); };
@@ -546,15 +571,16 @@ function renderToday(){
   $("kLeft").textContent = left>=0 ? fmt(Math.max(0,P.kcalLow-T.kcal))+"–"+fmt(left) : fmt(-left)+" over";
   $("kLeft").className = left<0?"over":"";
   $("kBar").style.width=Math.min(100,T.kcal/max*100)+"%";
-  $("kBar").style.background = left<0?"var(--over)":"var(--accent)";
+  $("kBar").style.background = left<0?"var(--over)":T.kcal>=P.kcalLow?"var(--leaf)":"var(--accent)";
   $("kBand").style.left=(P.kcalLow/max*100)+"%"; $("kBand").style.width=((P.kcalHigh-P.kcalLow)/max*100)+"%";
   const mid=(P.kcalLow+P.kcalHigh)/2, carbG=Math.round((mid-P.protein*4)*0.5/4), fatG=Math.round((mid-P.protein*4)*0.5/9);
   const rows=[["Protein",T.p,P.protein,"--prot"],["Fibre",T.fb,P.fibre,"--fibre"],["Carbs",T.c,carbG,"--carb"],["Fat",T.f,fatG,"--fat"]];
   $("macros").innerHTML=rows.map(([n,v,t,c])=>`<div class="m"><div class="row"><span>${n}</span><b>${Math.round(v)} / ${t} g</b></div><div class="bar"><i style="width:${Math.min(100,v/t*100)}%;background:var(${c})"></i></div></div>`).join("");
+  renderGoal("tGoal");
   const by={}; dayEntries().forEach(e=>(by[e.meal]=by[e.meal]||[]).push(e));
   $("meals").innerHTML=MEALS.filter(([k])=>by[k]||["breakfast","lunch","dinner"].includes(k)).map(([k,l])=>{
     const es=by[k]||[], t=totals(es);
-    return `<div class="meal"><h3>${l}<span>${es.length?fmt(t.kcal)+" kcal · "+Math.round(t.p)+" g P":""}</span></h3><div class="list">${
+    return `<div class="meal" style="--mc:var(--m-${k})"><h3><span class="chip">${l}</span><span>${es.length?fmt(t.kcal)+" kcal · "+Math.round(t.p)+" g P":""}</span></h3><div class="list">${
       es.length?es.map(e=>`<div class="item"><button class="nm" data-edit="${esc(e.id)}"><b>${esc(e.name)}</b><small>${esc(e.amountLabel||"")} · tap to edit</small></button><div class="kc">${fmt(e.kcal)}<small>${r1(e.p)} g P</small></div><button class="x" data-del="${esc(e.id)}" aria-label="Remove ${esc(e.name)}">×</button></div>`).join("")
       :`<div class="empty">Nothing logged yet.</div>`}</div></div>`;
   }).join("");
@@ -591,11 +617,21 @@ function openAdd(entry){
   openSheet($("addSheet"));
 }
 $("fab").onclick=()=>openAdd();
+function recentFoods(n=8){
+  const seen=new Map(); Object.keys(DB.days).sort().reverse().slice(0,21).forEach(d=>{ (DB.days[d].entries||[]).slice().reverse().forEach(e=>{ if(e.foodId&&DB.foods[e.foodId]&&!seen.has(e.foodId)) seen.set(e.foodId,true); }); });
+  return [...seen.keys()].slice(0,n).map(id=>DB.foods[id]);
+}
 function renderPick(){
   const q=$("aSearch").value.trim().toLowerCase();
-  const list=foodsSorted(q);
-  $("aPick").innerHTML = list.length ? list.map(f=>`<button data-id="${esc(f.id)}" aria-pressed="${!!(picked&&picked.id===f.id)}"><span>${esc(f.name)}${f.recipe?'<span class="tag">recipe</span>':''}</span><small>${fmt(f.kcal)} kcal ${basisTxt(f)}</small></button>`).join("")
-    : `<div class="empty">${Object.keys(DB.foods).length?"No match. Try Photo or Quick.":"Your library is empty. Import your data in Settings, or add foods in the Foods tab."}</div>`;
+  const row=f=>`<button data-id="${esc(f.id)}" aria-pressed="${!!(picked&&picked.id===f.id)}"><span>${f.fav?"★ ":""}${esc(f.name)}${f.recipe?'<span class="tag">recipe</span>':''}</span><small>${fmt(f.kcal)} kcal ${basisTxt(f)}</small></button>`;
+  let html="";
+  if(!q){
+    const favs=foodsSorted("").filter(f=>f.fav), rec=recentFoods().filter(f=>!f.fav);
+    if(favs.length) html+=`<div class="sec">★ Favourites</div>`+favs.map(row).join("");
+    if(rec.length) html+=`<div class="sec">Recent</div>`+rec.map(row).join("");
+    const rest=foodsSorted(""); if(rest.length) html+=`<div class="sec">All foods</div>`+rest.map(row).join("");
+  } else html=foodsSorted(q).map(row).join("");
+  $("aPick").innerHTML = html || `<div class="empty">${Object.keys(DB.foods).length?"No match. Try Photo or Quick.":"Your library is empty. Import your data in Settings, or add foods in the Foods tab."}</div>`;
   $("aPick").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     picked=DB.foods[b.dataset.id]; $("aAmt").value = picked.basis==="unit"?1:100;
     renderPick(); updAdd(); $("aAmt").focus(); $("aAmt").select();
@@ -721,9 +757,10 @@ document.querySelectorAll("#fFilter button").forEach(b=>b.onclick=()=>{ FFILTER=
 $("fSearch").oninput=renderFoods;
 function renderFoods(){
   const q=$("fSearch").value.trim().toLowerCase();
-  const list=foodsSorted(q).filter(f=>FFILTER==="all"||(FFILTER==="recipes")===!!f.recipe);
-  $("foodList").innerHTML = list.length ? list.map(f=>`<div class="item"><button class="nm" data-f="${esc(f.id)}"><b>${esc(f.name)}${f.recipe?'<span class="tag">recipe</span>':''}</b><small>${basisTxt(f)} · ${r1(f.p)} P · ${r1(f.c)} C · ${r1(f.f)} F · ${r1(f.fb)} fibre</small></button><div class="kc">${fmt(f.kcal)}<small>kcal</small></div><span></span></div>`).join("")
+  const list=foodsSorted(q).filter(f=>FFILTER==="all"||(FFILTER==="fav"?f.fav:(FFILTER==="recipes")===!!(f.recipe&&f.recipe.ingredients)));
+  $("foodList").innerHTML = list.length ? list.map(f=>`<div class="item"><button class="nm" data-f="${esc(f.id)}"><b>${esc(f.name)}${f.recipe?'<span class="tag">recipe</span>':''}</b><small>${basisTxt(f)} · ${r1(f.p)} P · ${r1(f.c)} C · ${r1(f.f)} F · ${r1(f.fb)} fibre</small></button><div class="kc">${fmt(f.kcal)}<small>kcal</small></div><button class="star" data-star="${esc(f.id)}" aria-pressed="${!!f.fav}" aria-label="${f.fav?"Remove from":"Add to"} favourites">★</button></div>`).join("")
     : `<div class="empty">${Object.keys(DB.foods).length?"No match.":"No foods yet. Import your data in Settings, or tap New food."}</div>`;
+  $("foodList").querySelectorAll("[data-star]").forEach(b=>b.onclick=()=>{ const f={...DB.foods[b.dataset.star]}; f.fav=!f.fav; put("foods",f.id,f); renderFoods(); toast(f.fav?"Added to favourites":"Removed from favourites"); });
   $("foodList").querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ const f=DB.foods[b.dataset.f]; f.recipe&&f.recipe.ingredients?openRecipe(f):openFood(f); });
 }
 let editFood=null;
@@ -733,6 +770,7 @@ function openFood(f){
   $("fName").value=f.name||""; $("fBasis").value=f.basis||"100g"; $("fUnit").value=f.unit||"";
   [["fK","kcal"],["fP","p"],["fC","c"],["fF","f"],["fFb","fb"],["fPieceG","pieceG"],["fNote","note"]].forEach(([i,k])=>$(i).value=f[k]??"");
   if(!$("fNote").value && typeof f.recipe==="string") $("fNote").value=f.recipe;
+  $("fFav").checked=!!f.fav;
   $("fDel").hidden=!editFood;
   openSheet($("foodSheet")); setTimeout(()=>$("fName").focus(),60);
 }
@@ -743,6 +781,7 @@ $("foodForm").onsubmit=e=>{ e.preventDefault();
   const f={...base,id:base.id||slug($("fName").value),name:$("fName").value.trim(),basis:$("fBasis").value,unit:$("fUnit").value.trim(),kcal:n($("fK").value),p:n($("fP").value),c:n($("fC").value),f:n($("fF").value),fb:n($("fFb").value)};
   if($("fPieceG").value) f.pieceG=+$("fPieceG").value; else delete f.pieceG;
   if($("fNote").value) f.note=$("fNote").value.trim();
+  f.fav=$("fFav").checked;
   put("foods",f.id,f); renderFoods(); renderPick(); closeSheet(); toast(editFood?"Food updated":"Food saved");
 };
 $("fDel").onclick=()=>armDelete($("fDel"),()=>{ del("foods",editFood.id); renderFoods(); closeSheet(); toast("Deleted"); });
@@ -833,6 +872,31 @@ $("rSave").onclick=()=>{
 };
 $("rDel").onclick=()=>armDelete($("rDel"),()=>{ del("foods",REC.id); renderFoods(); closeSheet(); toast("Recipe deleted"); });
 
+/* ================= days to goal ================= */
+function goalEstimate(){
+  const P=plan(); if(!P.goalKg) return null;
+  const w=Object.values(DB.body).filter(x=>x.kg>0).sort((a,b)=>a.date.localeCompare(b.date));
+  const latest=w[w.length-1]; const now=latest?latest.kg:P.startKg; if(!now) return null;
+  const toGo=now-P.goalKg; if(toGo<=0) return {done:true};
+  let rate=P.pace||0.35, src="planned";
+  if(w.length>=3 && (parse(latest.date)-parse(w[0].date))/864e5>=14){
+    const xs=w.map(x=>(parse(x.date)-parse(w[0].date))/864e5/7), ys=w.map(x=>x.kg);
+    const mx=xs.reduce((a,b)=>a+b)/xs.length, my=ys.reduce((a,b)=>a+b)/ys.length;
+    const slope=xs.reduce((a,x,i)=>a+(x-mx)*(ys[i]-my),0)/xs.reduce((a,x)=>a+(x-mx)**2,0);
+    if(-slope>0.05){ rate=-slope; src="current"; }
+  }
+  const days=Math.round(toGo/rate*7), base=latest?parse(latest.date):new Date(), date=new Date(base); date.setDate(date.getDate()+days);
+  const left=Math.max(0,Math.round((date-new Date())/864e5));
+  return {days:left,date,rate,src,toGo};
+}
+function renderGoal(el){
+  const g=goalEstimate(), box=$(el);
+  if(!g){ box.hidden=true; return; }
+  box.hidden=false;
+  if(g.done){ box.innerHTML=`<div><b>Goal reached</b> <span>🎉</span></div><div class="r"><span>Time to set maintenance calories</span></div>`; return; }
+  box.innerHTML=`<div><b>~${g.days}</b> <span>days to ${plan().goalKg} kg</span></div><div class="r"><span>around ${g.date.toLocaleDateString("en-CA",{month:"short",day:"numeric"})}<br>at ${g.src==="current"?"your pace":"planned"} ${r1(g.rate*100)/100} kg/wk</span></div>`;
+}
+
 /* ================= body ================= */
 function nextMonday(){ const d=new Date(); const add=(8-d.getDay())%7; d.setDate(d.getDate()+add); return d; }
 function renderBody(){
@@ -855,7 +919,7 @@ function renderBody(){
   $("wF").textContent=days.length?Math.round(avg("fb"))+" g":"–"; $("wFSub").textContent="target "+P.fibre+" g";
   const nm=nextMonday(), isMon=new Date().getDay()===1, doneToday=DB.body[todayIso()];
   $("nextWeigh").textContent = isMon&&!doneToday ? "It's Monday: weigh-in day. Morning, after the bathroom, before food." : "Next weigh-in: "+(isMon?"next ":"")+nm.toLocaleDateString("en-CA",{weekday:"long",month:"short",day:"numeric"})+". Once a week is enough.";
-  drawChart(w,P,start);
+  drawChart(w,P,start); renderGoal("bGoal");
   $("bodyList").innerHTML = b.length ? [...b].reverse().map(x=>`<div class="item"><div class="nm" style="cursor:default"><b>${parse(x.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})}</b><small>${[x.waist?"waist "+x.waist:"",x.hips?"hips "+x.hips:""].filter(Boolean).join(" · ")||"weight only"}</small></div><div class="kc">${x.kg?x.kg.toFixed(1)+" kg":"–"}</div><button class="x" data-bd="${esc(x.date)}" aria-label="Delete weigh-in">×</button></div>`).join("")
     : `<div class="empty">No weigh-ins yet.</div>`;
   $("bodyList").querySelectorAll("[data-bd]").forEach(btn=>btn.onclick=()=>armDelete(btn,()=>{ del("body",btn.dataset.bd); renderBody(); }));
@@ -885,9 +949,9 @@ $("bodyForm").onsubmit=e=>{ e.preventDefault();
 };
 
 /* ================= settings ================= */
-function fillPlan(){ const P=plan(); $("pLow").value=P.kcalLow; $("pHigh").value=P.kcalHigh; $("pProt").value=P.protein; $("pFib").value=P.fibre; $("pStart").value=P.startKg??""; $("pGoal").value=P.goalKg??""; $("pDate").value=P.startDate||""; }
+function fillPlan(){ const P=plan(); $("pLow").value=P.kcalLow; $("pHigh").value=P.kcalHigh; $("pProt").value=P.protein; $("pFib").value=P.fibre; $("pStart").value=P.startKg??""; $("pGoal").value=P.goalKg??""; $("pDate").value=P.startDate||""; $("pPace").value=P.pace; }
 $("planForm").onsubmit=e=>{ e.preventDefault(); const P=plan(), n=(id,d)=>$(id).value===""?d:+$(id).value;
-  put("settings","plan",{...P,kcalLow:n("pLow",P.kcalLow),kcalHigh:n("pHigh",P.kcalHigh),protein:n("pProt",P.protein),fibre:n("pFib",P.fibre),startKg:n("pStart",null),goalKg:n("pGoal",null),startDate:$("pDate").value||null});
+  put("settings","plan",{...P,kcalLow:n("pLow",P.kcalLow),kcalHigh:n("pHigh",P.kcalHigh),protein:n("pProt",P.protein),fibre:n("pFib",P.fibre),startKg:n("pStart",null),goalKg:n("pGoal",null),startDate:$("pDate").value||null,pace:n("pPace",P.pace)});
   renderAll(); toast("Plan saved"); };
 function renderPots(){
   const ps=pots();
@@ -932,6 +996,9 @@ $("sGo").onclick=async()=>{ const b=$("sGo"); b.disabled=true; b.innerHTML='<spa
   try{ await connect($("sUrl").value,$("sTok").value.trim()); $("setup").hidden=true; $("cUrl").value=CONN.url; $("cTok").value=CONN.token; toast("Connected. Welcome to Budgie!"); }
   catch(e){ $("sErr").textContent=connErr(e); $("sErr").hidden=false; }
   b.disabled=false; b.textContent="Connect"; };
+$("sCode").oninput=()=>{ try{ const j=JSON.parse(decodeURIComponent(escape(atob($("sCode").value.trim().replace(/^budgie:/,""))))); if(j.u){ $("sUrl").value=j.u; $("sTok").value=j.t||""; toast("Code filled in. Tap Connect."); } }catch(e){} };
+$("cCode").onclick=async()=>{ if(!CONN||!CONN.url){ toast("Connect first"); return; } const code="budgie:"+btoa(unescape(encodeURIComponent(JSON.stringify({u:CONN.url,t:CONN.token}))));
+  try{ await navigator.clipboard.writeText(code); toast("Setup code copied. Paste it on the other device; keep it private."); }catch(e){ prompt?.("Copy this setup code",code); } };
 $("sLocal").onclick=()=>{ CONN={local:true}; LS.set("budgie-conn",CONN); $("setup").hidden=true; status(); };
 
 /* ================= boot ================= */
