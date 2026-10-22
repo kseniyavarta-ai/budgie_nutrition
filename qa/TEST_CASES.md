@@ -40,6 +40,9 @@ Tests run against a **fake Google Sheet** (an in-memory copy of `apps-script/Cod
 | V11 | Big mic button | Tap mic, talk, tap again → review card |
 | V6 | Siri link | Opening `#say=<text>` lands on the review card, not saved until approved |
 | V12 | AI can't run | Missing API key or no credits → a plain message on screen says what to fix (not a disappearing toast) |
+| V13 | Script crash page | Sheet answers AI with Google's error page → reason + Google's text shown above the pinned button; no duplicate Understand button |
+| V14 | Test AI works | Settings → Test AI → "AI works" with time |
+| V15 | Test AI explains | Script crash → Test AI says what to do (run testAI, new version) |
 
 ## Photo / barcode
 

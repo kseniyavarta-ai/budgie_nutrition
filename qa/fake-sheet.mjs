@@ -36,12 +36,14 @@ export class FakeSheet {
     this.loadDelayMs = 0;    // extra delay for load only
     this.offline = false;    // network failure
     this.reject = null;      // fn(req) -> error string to reject that write
+    this.aiHtml = null;      // string: answer "ai" with this HTML error page (like an Apps Script crash)
     this.log = [];
   }
   async handle(route) {
     const req = JSON.parse(route.request().postData() || "{}");
     this.log.push(req.action);
     if (this.offline) return route.abort("internetdisconnected");
+    if (this.aiHtml && req.action === "ai") return route.fulfill({ status: 200, contentType: "text/html", body: this.aiHtml });
     // snapshot for load happens at the START of the request (like a real read)
     const snapshot = req.action === "load" ? JSON.parse(JSON.stringify(this.data)) : null;
     const wait = this.delayMs + (req.action === "load" ? this.loadDelayMs : 0);

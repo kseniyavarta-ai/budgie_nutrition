@@ -57,7 +57,7 @@ test.describe("Say (voice or typed)", () => {
     await openAdd(app);
     await app.click('#modeSeg [data-m="say"]');
     await app.fill("#sayText", text);
-    await app.click("#sayGo");
+    await app.click("#aAdd");
     await expect(app.locator("#sayOut .ai-item[data-item]")).toHaveCount(3);
   }
 
@@ -149,7 +149,7 @@ test.describe("Say (voice or typed)", () => {
     await openAdd(app);
     await app.click('#modeSeg [data-m="say"]');
     await app.locator("#sayText").fill("two eggs");
-    await app.click("#sayGo");
+    await app.click("#aAdd");
     await expect(app.locator("#sayNote")).toContainText(/ANTHROPIC_API_KEY/);
   });
 
@@ -180,11 +180,42 @@ test.describe("Say (voice or typed)", () => {
     await app.click("#fab");
     await app.click('#modeSeg [data-m="say"]');
     await app.fill("#sayText", "two eggs");
-    await app.click("#sayGo");
+    await app.click("#aAdd");
     await expect(app.locator("#sayNote")).toContainText("ANTHROPIC_API_KEY");
     sheet.reject = req => req.action === "ai" ? "Your credit balance is too low to access the Anthropic API." : null;
-    await app.click("#sayGo");
+    await app.click("#aAdd");
     await expect(app.locator("#sayNote")).toContainText("out of credits");
+  });
+});
+
+test.describe("AI problems are visible", () => {
+  test("V13 script crash page: reason and Google's text shown above the button, not hidden", async ({ app, sheet }) => {
+    sheet.aiHtml = "<!DOCTYPE html><html><body><div>Exception: You do not have permission to call UrlFetchApp.fetch. Required permissions: https://www.googleapis.com/auth/script.external_request</div></body></html>";
+    await app.click("#fab");
+    await app.click('#modeSeg [data-m="say"]');
+    await app.fill("#sayText", "whole wheat toast and 50 g of avocado");
+    await app.click("#aAdd");
+    const note = app.locator("#sayNote");
+    await expect(note).toBeVisible();
+    await expect(note).toContainText("testAI");
+    await expect(note).toContainText("UrlFetchApp");
+    // the message must not sit under the pinned Add button
+    const n = await note.boundingBox(), b = await app.locator("#aAdd").boundingBox();
+    expect(n.y + n.height <= b.y || n.y >= b.y + b.height).toBeTruthy();
+    await expect(app.locator("#sayGo")).toBeHidden();
+  });
+
+  test("V14 Settings → Test AI says it works", async ({ app }) => {
+    await app.click('.tabs [data-tab="settings"]');
+    await app.click("#cTestAI");
+    await expect(app.locator("#aiTestOut")).toContainText("AI works");
+  });
+
+  test("V15 Settings → Test AI explains a crash", async ({ app, sheet }) => {
+    sheet.aiHtml = "<html><body>Exception: You do not have permission to call UrlFetchApp.fetch</body></html>";
+    await app.click('.tabs [data-tab="settings"]');
+    await app.click("#cTestAI");
+    await expect(app.locator("#aiTestOut")).toContainText("testAI");
   });
 });
 

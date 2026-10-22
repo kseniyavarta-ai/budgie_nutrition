@@ -136,6 +136,15 @@ function ai_(req, key) {
   return body.content.map(function (b) { return b.text || ''; }).join('');
 }
 
+/**
+ * Run this once from the Apps Script editor (pick testAI at the top → Run) to grant
+ * permission to reach the Anthropic API. The log shows whether your key works.
+ */
+function testAI() {
+  var key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  Logger.log(ai_({ system: 'Reply with only: ok', prompt: 'test', images: [] }, key));
+}
+
 function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }

@@ -136,7 +136,10 @@ textarea{resize:vertical;min-height:60px}
 .pick button:first-child{border-top:0}
 .pick button[aria-pressed="true"]{background:var(--soft)}
 .pick button small{color:var(--muted);font-family:var(--mono);font-size:.76rem;white-space:nowrap}
-#sayNote,#phNoteOut{font-family:var(--body);color:var(--ink)}
+#phNoteOut{font-family:var(--body);color:var(--ink)}
+.alert{border-radius:12px;padding:10px 12px;font-size:.9rem;line-height:1.4;background:var(--sun-soft);color:var(--ink)}
+.alert.err{background:#FBE4E4;color:#7A1F1F;border:1px solid #F0B7B7}
+.alert small{display:block;margin-top:4px;font-family:var(--mono);font-size:.72rem;opacity:.8;overflow-wrap:anywhere}
 .preview{font:500 .88rem var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 .chk{display:flex;gap:8px;align-items:center;font-size:.9rem;color:var(--ink)}
 .chk input{width:auto}
@@ -390,6 +393,8 @@ details summary{list-style:none}
         <button class="btn" id="cSave">Save and test</button>
         <button class="btn ghost" id="cSync">Sync now</button>
       </div>
+      <button class="btn ghost" id="cTestAI" type="button">Test AI (photos and 🎤 Say)</button>
+      <div class="alert" id="aiTestOut" hidden></div>
       <button class="btn ghost" id="cCode">Copy setup code for another device</button>
       <p class="note">Each browser remembers the connection on its own. On iPhone, the Home Screen app and Safari count as two, so connect inside the Home Screen app.</p>
     </div>
@@ -438,11 +443,12 @@ details summary{list-style:none}
       <button class="btn mic" id="sayMic" type="button" hidden>🎤 Tap and tell me what you ate</button>
       <label><span id="sayLbl">What did you eat?</span><textarea id="sayText" rows="3" placeholder="e.g. two eggs, 50 grams of avocado and one cottage cheese bagel, about 85 grams"></textarea></label>
       <p class="note" id="sayTip">Tip: tap the 🎤 on your keyboard and just talk. Say amounts when you know them; I'll estimate the rest.</p>
-      <button class="btn ghost" id="sayGo">Understand it</button>
+      <button class="btn ghost" id="sayGo" hidden>Understand it</button>
       </div>
+      <div class="alert" id="sayNote" hidden></div>
       <button class="btn ghost" id="sayEdit" type="button" hidden>✎ Change what I said</button>
       <div class="list" id="sayOut" hidden></div>
-      <div class="preview" id="sayNote"></div>
+      <div style="height:72px" aria-hidden="true"></div>
     </div>
 
     <div id="m-photo" hidden style="display:grid;gap:10px">
@@ -534,7 +540,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · say-review";
+const VERSION = "v2026.10.22 · ai-check";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -564,10 +570,15 @@ async function api(action, payload, conn){
   conn = conn || CONN;
   if(!conn || !conn.url) throw new Error("not_connected");
   let res;
-  try{ res = await fetch(conn.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:conn.token,action,...payload})}); }
-  catch(e){ throw new Error("unreachable"); }
+  const ctl = new AbortController(), timer = setTimeout(()=>ctl.abort(), action==="ai" ? 90000 : 30000);
+  try{ res = await fetch(conn.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:conn.token,action,...payload}),signal:ctl.signal}); }
+  catch(e){ clearTimeout(timer); const err=new Error(e.name==="AbortError"?"timeout":"unreachable"); err.detail=String(e.message||e); throw err; }
+  clearTimeout(timer);
   const txt = await res.text(); let j;
-  try{ j = JSON.parse(txt); }catch(e){ throw new Error(/<html|<!doctype/i.test(txt) ? "not_public" : "bad_reply"); }
+  try{ j = JSON.parse(txt); }catch(e){
+    const err=new Error(/<html|<!doctype/i.test(txt) ? "not_public" : "bad_reply");
+    err.detail=("HTTP "+res.status+" · "+txt.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi," ").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()).slice(0,220);
+    throw err; }
   if(!j.ok) throw new Error(j.error||"failed");
   return j;
 }
@@ -704,9 +715,15 @@ function aiErr(e){
   if(/invalid x-api-key|authentication/i.test(m)) return "The Anthropic API key in your Sheet isn't valid. Copy it again from console.anthropic.com → API keys.";
   if(/model/i.test(m)) return "The AI model name was rejected ("+m+"). Tell Claude this message.";
   if(/unknown_action/.test(m)) return "Your Sheet script is out of date. Paste the newest Code.gs and deploy a New version.";
-  if(/unreachable|not_public|bad_reply/.test(m)) return "Couldn't reach your Sheet. Check your connection, then try again.";
+  const d=(e&&e.detail)||"";
+  if(/UrlFetchApp|external_request|permission/i.test(d)) return "Your Sheet script needs permission to reach the AI. In Apps Script pick the function testAI at the top, tap Run, allow access, then Deploy → Manage deployments → edit → New version.";
+  if(m==="timeout") return "The AI took too long to answer. Try again in a moment.";
+  if(m==="not_public") return "Your Sheet script answered with an error page instead of a reply. Most often it needs a New version deployed (Deploy → Manage deployments → edit → New version).";
+  if(m==="unreachable") return "The request to your Sheet failed before it got an answer. Check your connection and try again; if it keeps happening, use Settings → Test AI.";
+  if(m==="bad_reply") return "Your Sheet sent back something Budgie didn't understand. Use Settings → Test AI and send Claude a screenshot.";
   return "Something went wrong: "+m;
 }
+function showAiErr(el,e){ const box=$(el); box.hidden=false; box.className="alert err"; box.innerHTML=esc(aiErr(e))+(e&&e.detail?`<small>${esc(e.detail)}</small>`:""); requestAnimationFrame(()=>box.scrollIntoView({block:"center"})); }
 async function askAI(system,prompt,images){
   if(!CONN || !CONN.url) throw new Error("Connect your Google Sheet in Settings to use photo AI.");
   const j=await api("ai",{system,prompt,images:images||[]});
@@ -778,7 +795,7 @@ function openAdd(entry){
   ["aSearch","aAmt","qName","qK","qP","qC","qF","qFb","phNote","bcNum","bcAmt"].forEach(i=>$(i).value="");
   $("phLabel").checked=false; $("phOut").hidden=true; $("phOut").innerHTML=""; $("phNoteOut").textContent=""; $("phCount").textContent="No photos yet"; $("phGo").disabled=true;
   $("bcOut").textContent=""; $("bcAmtWrap").hidden=true;
-  $("sayText").value=""; $("sayOut").hidden=true; $("sayOut").innerHTML=""; $("sayNote").textContent=""; $("sayGo").textContent="Understand it"; sayShowInput(); lastSaid="";
+  $("sayText").value=""; $("sayOut").hidden=true; $("sayOut").innerHTML=""; sayNoteSet(""); $("sayGo").textContent="Understand it"; sayShowInput(); lastSaid="";
   $("addTitle").textContent = editing?"Edit entry":"Add food";
   $("aAdd").textContent = editing?"Save changes":"Add to log";
   $("aDel").hidden=!editing;
@@ -917,6 +934,7 @@ For every item also give kcal, protein p, carbs c, fat f and fibre fb in grams F
 If the person says which meal it was (breakfast, lunch, dinner, dessert, snack), return it as "meal" (breakfast|lunch|dinner|dessert|other), otherwise null.
 Return ONLY JSON: {"meal":null,"items":[{"name":"","grams":0,"pieces":null,"libraryId":null,"kcal":0,"p":0,"c":0,"f":0,"fb":0}],"note":"one short sentence about anything you assumed"}`;
 let lastSaid="", sayBusy=null;
+function sayNoteSet(t,err){ const b=$("sayNote"); b.hidden=!t; b.className="alert"+(err?" err":""); b.textContent=t; if(t&&err) requestAnimationFrame(()=>b.scrollIntoView({block:"center"})); }
 function sayShowInput(){ $("sayIn").hidden=false; $("sayIn").style.display="grid"; $("sayEdit").hidden=true; }
 function sayShowReview(){ $("sayIn").hidden=true; $("sayIn").style.display="none"; $("sayEdit").hidden=false; $("addSheet").querySelector(".in").scrollTop=0; }
 function understandSay(){
@@ -925,16 +943,16 @@ function understandSay(){
   if(text===lastSaid && aiItems.length){ sayShowReview(); return Promise.resolve(); }
   const b=$("sayGo"); b.disabled=true; b.innerHTML='<span class="spin"></span>Understanding…';
   $("aAdd").disabled=true; $("aAdd").innerHTML='<span class="spin"></span>Reading what you said…';
-  $("sayNote").textContent="";
+  sayNoteSet("");
   sayBusy=(async()=>{
     try{
       const j=await askAI(SAY_SYS,"User's library:\n"+libraryIndex()+"\n\nWhat they said:\n"+text,[]);
       if(MODE!=="say") return;
       aiItems=(j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
       if(j.meal && !editing) $("aMeal").value=j.meal;
-      lastSaid=text; $("sayNote").textContent=j.note||""; renderAiItems();
-      if(aiItems.length) sayShowReview(); else { $("sayNote").textContent="I couldn't find any food in that. Try saying it again with amounts."; }
-    }catch(e){ console.warn(e); $("sayNote").textContent=aiErr(e); }
+      lastSaid=text; sayNoteSet(j.note||""); renderAiItems();
+      if(aiItems.length) sayShowReview(); else { sayNoteSet("I couldn't find any food in that. Try saying it again with amounts.",true); }
+    }catch(e){ console.warn(e); showAiErr("sayNote",e); }
     finally{ sayBusy=null; b.disabled=false; b.textContent="Understand again"; updAdd(); }
   })();
   return sayBusy;
@@ -1302,6 +1320,18 @@ async function connect(url,token){
 $("cSave").onclick=async()=>{ const b=$("cSave"); b.disabled=true; b.innerHTML='<span class="spin"></span>Testing…';
   try{ await connect($("cUrl").value,$("cTok").value.trim()); toast("Connected to your Sheet"); }catch(e){ toast(connErr(e)); }
   b.disabled=false; b.textContent="Save and test"; };
+$("cTestAI").onclick=async()=>{
+  const b=$("cTestAI"), out=$("aiTestOut"); b.disabled=true; b.innerHTML='<span class="spin"></span>Testing…'; out.hidden=true;
+  const t0=Date.now();
+  try{
+    if(!CONN||!CONN.url) throw new Error("not_connected");
+    await api("ping",{});
+    const j=await api("ai",{system:'Reply with only this JSON and nothing else: {"ok":true}',prompt:"test",images:[]});
+    out.hidden=false; out.className="alert"; out.textContent="✓ AI works. Answered in "+((Date.now()-t0)/1000).toFixed(1)+" s.";
+    if(!/ok/.test(j.text||"")) out.textContent+=" (Unexpected answer: "+String(j.text).slice(0,80)+")";
+  }catch(e){ showAiErr("aiTestOut",e); }
+  b.disabled=false; b.textContent="Test AI (photos and 🎤 Say)";
+};
 $("cSync").onclick=()=>{ syncDown(); toast("Syncing…"); };
 $("impFile").onchange=async e=>{
   const file=e.target.files[0]; if(!file) return;
