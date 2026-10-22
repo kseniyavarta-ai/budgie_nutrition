@@ -1,38 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#EAF3FB"/>
-  <!-- tail -->
-  <path d="M238 360 L 150 492 L 196 488 L 278 386 Z" fill="#1F4E86"/>
-  <!-- body -->
-  <ellipse cx="270" cy="318" rx="128" ry="150" fill="#3A86D4"/>
-  <!-- belly highlight -->
-  <ellipse cx="318" cy="352" rx="70" ry="104" fill="#5FA2E3"/>
-  <!-- wing with barring -->
-  <path d="M168 238 C 150 330, 178 420, 262 452 C 250 380, 236 300, 222 236 Z" fill="#2A6AB0"/>
-  <g fill="none" stroke="#132B47" stroke-width="10" stroke-linecap="round">
-    <path d="M178 276 q 22 10 44 0"/>
-    <path d="M176 312 q 26 12 52 0"/>
-    <path d="M182 350 q 28 12 56 0"/>
-    <path d="M194 388 q 28 12 54 0"/>
+  <!-- blue budgie, facing right -->
+  <g transform="translate(-44 72) scale(0.68)">
+    <path d="M238 360 L 150 492 L 196 488 L 278 386 Z" fill="#1F4E86"/>
+    <ellipse cx="270" cy="318" rx="128" ry="150" fill="#3A86D4"/>
+    <ellipse cx="318" cy="352" rx="70" ry="104" fill="#5FA2E3"/>
+    <path d="M168 238 C 150 330, 178 420, 262 452 C 250 380, 236 300, 222 236 Z" fill="#2A6AB0"/>
+    <g fill="none" stroke="#132B47" stroke-width="10" stroke-linecap="round">
+      <path d="M178 276 q 22 10 44 0"/><path d="M176 312 q 26 12 52 0"/><path d="M182 350 q 28 12 56 0"/><path d="M194 388 q 28 12 54 0"/>
+    </g>
+    <circle cx="290" cy="176" r="104" fill="#F7FAFD"/>
+    <g fill="none" stroke="#132B47" stroke-width="9" stroke-linecap="round">
+      <path d="M206 140 q 24 -14 48 -4"/><path d="M198 172 q 26 -14 52 -4"/><path d="M200 204 q 24 -12 46 -2"/>
+    </g>
+    <circle cx="300" cy="160" r="22" fill="#132B47"/><circle cx="307" cy="152" r="7" fill="#FFFFFF"/>
+    <ellipse cx="364" cy="170" rx="22" ry="16" fill="#3A86D4"/>
+    <path d="M354 180 C 392 180, 400 222, 372 240 C 368 220, 360 200, 344 192 Z" fill="#E3B23C"/>
+    <g fill="#132B47"><circle cx="322" cy="250" r="9"/><circle cx="350" cy="244" r="9"/><circle cx="294" cy="252" r="8"/></g>
   </g>
-  <!-- head (white face of a blue budgie) -->
-  <circle cx="290" cy="176" r="104" fill="#F7FAFD"/>
-  <!-- head barring -->
-  <g fill="none" stroke="#132B47" stroke-width="9" stroke-linecap="round">
-    <path d="M206 140 q 24 -14 48 -4"/>
-    <path d="M198 172 q 26 -14 52 -4"/>
-    <path d="M200 204 q 24 -12 46 -2"/>
+  <!-- Lemon, facing left (mirrored) -->
+  <g transform="translate(556 72) scale(-0.68 0.68)">
+    <path d="M238 360 L 150 492 L 196 488 L 278 386 Z" fill="#E2C61A"/>
+    <ellipse cx="270" cy="318" rx="128" ry="150" fill="#F0D41E"/>
+    <ellipse cx="318" cy="352" rx="70" ry="104" fill="#F8E768"/>
+    <path d="M168 238 C 150 330, 178 420, 262 452 C 250 380, 236 300, 222 236 Z" fill="#E6CB1C"/>
+    <g fill="none" stroke="#D2B514" stroke-width="7" stroke-linecap="round">
+      <path d="M178 290 q 22 10 44 0"/><path d="M182 340 q 28 12 56 0"/>
+    </g>
+    <circle cx="290" cy="176" r="104" fill="#F3DA2A"/>
+    <circle cx="300" cy="160" r="25" fill="#9A9A8C"/>
+    <circle cx="300" cy="160" r="19" fill="#132B47"/><circle cx="306" cy="153" r="6" fill="#FFFFFF"/>
+    <ellipse cx="364" cy="170" rx="22" ry="16" fill="#4A78C9"/>
+    <path d="M354 180 C 392 180, 400 222, 372 240 C 368 220, 360 200, 344 192 Z" fill="#C9B07A"/>
+    <ellipse cx="318" cy="236" rx="26" ry="11" fill="#FFF8DF"/>
   </g>
-  <!-- eye -->
-  <circle cx="300" cy="160" r="22" fill="#132B47"/>
-  <circle cx="307" cy="152" r="7" fill="#FFFFFF"/>
-  <!-- cere -->
-  <ellipse cx="364" cy="170" rx="22" ry="16" fill="#3A86D4"/>
-  <!-- beak -->
-  <path d="M354 180 C 392 180, 400 222, 372 240 C 368 220, 360 200, 344 192 Z" fill="#E3B23C"/>
-  <!-- throat spots -->
-  <g fill="#132B47">
-    <circle cx="322" cy="250" r="9"/>
-    <circle cx="350" cy="244" r="9"/>
-    <circle cx="294" cy="252" r="8"/>
-  </g>
+  <!-- perch -->
+  <rect x="36" y="376" width="440" height="22" rx="11" fill="#B08560"/>
 </svg>

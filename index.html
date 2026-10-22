@@ -19,8 +19,8 @@
 :root{
   --bg:#F1F7FD; --surface:#FFFFFF; --ink:#16202A; --muted:#5B6976; --line:#D8E3EE;
   --accent:#2C6FB7; --accent-ink:#FFFFFF; --soft:#E2EEFA; --cere:#E3B23C;
-  --sun:#F4C430; --sun-ink:#3A2C00; --sun-soft:#FFF4CF; --leaf:#3FA34D; --leaf-soft:#E2F4E2;
-  --m-breakfast:#E9A800; --m-lunch:#3FA34D; --m-dinner:#2C6FB7; --m-dessert:#E2668E; --m-other:#8A6FD1;
+  --sun:#F0D41E; --sun-ink:#3A3300; --sun-soft:#FFF7CC; --leaf:#3FA34D; --leaf-soft:#E2F4E2;
+  --m-breakfast:#E6C80F; --m-lunch:#3FA34D; --m-dinner:#2C6FB7; --m-dessert:#E2668E; --m-other:#8A6FD1;
   --prot:#6A4C9C; --carb:#B97C10; --fat:#2D8A8A; --fibre:#4E8A3A;
   --over:#B23B3B; --ok:#2E7D4F;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
@@ -31,8 +31,8 @@
 @media (prefers-color-scheme: dark){:root{
   --bg:#0E151C; --surface:#172029; --ink:#E5ECF2; --muted:#9AA8B5; --line:#283440;
   --accent:#6FA8E6; --accent-ink:#0B1218; --soft:#1C2A37; --cere:#E8C25E;
-  --sun:#F4C430; --sun-ink:#2A2000; --sun-soft:#3A3115; --leaf:#6CCB78; --leaf-soft:#18301D;
-  --m-breakfast:#F4C430; --m-lunch:#6CCB78; --m-dinner:#6FA8E6; --m-dessert:#F28BAD; --m-other:#B39DF0;
+  --sun:#F0D41E; --sun-ink:#2A2600; --sun-soft:#38330F; --leaf:#6CCB78; --leaf-soft:#18301D;
+  --m-breakfast:#F0D41E; --m-lunch:#6CCB78; --m-dinner:#6FA8E6; --m-dessert:#F28BAD; --m-other:#B39DF0;
   --prot:#B49AE0; --carb:#E2B04F; --fat:#6CC4C4; --fibre:#8CC478; --over:#EE7B7B; --ok:#6CCB92;
   color-scheme:dark}}
 *{box-sizing:border-box}
@@ -317,6 +317,7 @@ textarea{resize:vertical;min-height:60px}
       </div>
     </div>
     <div class="ver" id="ver"></div>
+    <div class="ver">In memory of Lemon 💛</div>
   </section>
 </div>
 
@@ -433,7 +434,7 @@ textarea{resize:vertical;min-height:60px}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · feathers";
+const VERSION = "v2026.10.22 · lemon";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
