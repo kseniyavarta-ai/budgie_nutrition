@@ -146,6 +146,10 @@ textarea{resize:vertical;min-height:60px}
 .ai-item:first-child{border-top:0}
 .ai-item input[type=checkbox]{width:auto}
 .ai-item small{display:block;color:var(--muted);font-size:.78rem}
+.ai-item .mac{color:var(--ink);font-variant-numeric:tabular-nums;font-size:.8rem;margin-top:2px}
+.ai-item.off{opacity:.45}
+.ai-head{padding:8px 10px;font-weight:700;font-size:.86rem;background:var(--soft,rgba(0,0,0,.03))}
+.ai-total{display:block;padding:8px 10px;border-top:1px solid var(--line);font-size:.86rem}
 .ing{display:grid;grid-template-columns:minmax(0,1fr) 80px auto;gap:8px;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
 .ing:first-child{border-top:0}
 .ing small{display:block;color:var(--muted);font-size:.76rem}
@@ -254,7 +258,7 @@ details summary{list-style:none}
       <div class="gc-top">
         <div class="stat"><span>Now</span><b id="gNow">–</b><small id="gNowD"></small></div>
         <div class="stat gc-goal"><span>Goal</span>
-          <form id="goalForm" class="gc-in"><input type="number" id="gGoal" step="0.1" inputmode="decimal" aria-label="Goal weight in kg" placeholder="63"><span>kg</span><button class="btn" type="submit" id="gSave" hidden>Set</button></form>
+          <form id="goalForm" class="gc-in"><input type="text" id="gGoal" step="0.1" inputmode="decimal" aria-label="Goal weight in kg" placeholder="63"><span>kg</span><button class="btn" type="submit" id="gSave" hidden>Set</button></form>
         </div>
         <div class="stat"><span>To go</span><b id="gToGo">–</b><small id="gToGoSub"></small></div>
       </div>
@@ -273,9 +277,9 @@ details summary{list-style:none}
       <p class="note" id="nextWeigh">Morning, after the bathroom, before food and drink.</p>
       <form class="grid" id="bodyForm">
         <label>Date<input type="date" id="bDate" required></label>
-        <label>Weight (kg)<input type="number" id="bKg" step="0.1" inputmode="decimal"></label>
-        <label>Waist (cm)<input type="number" id="bWa" step="0.5" inputmode="decimal" placeholder="every 2–4 wks"></label>
-        <label>Hips (cm)<input type="number" id="bHi" step="0.5" inputmode="decimal"></label>
+        <label>Weight (kg)<input type="text" id="bKg" step="0.1" inputmode="decimal"></label>
+        <label>Waist (cm)<input type="text" id="bWa" step="0.5" inputmode="decimal" placeholder="every 2–4 wks"></label>
+        <label>Hips (cm)<input type="text" id="bHi" step="0.5" inputmode="decimal"></label>
         <button class="btn full" type="submit">Save weigh-in</button>
       </form>
     </div>
@@ -328,22 +332,22 @@ details summary{list-style:none}
       <p class="note">Tell Budgie about you and it works out your calories and macros. It uses your latest weigh-in, and once you have 3+ weekly weigh-ins it switches to your real, measured burn.</p>
       <form class="grid" id="profForm">
         <label>Sex<select id="uSex"><option value="f">Female</option><option value="m">Male</option></select></label>
-        <label>Age<input type="number" id="uAge" inputmode="numeric"></label>
-        <label>Height (cm)<input type="number" id="uH" inputmode="decimal"></label>
-        <label>Weight now (kg)<input type="number" id="uW" step="0.1" inputmode="decimal"></label>
+        <label>Age<input type="text" id="uAge" inputmode="numeric"></label>
+        <label>Height (cm)<input type="text" id="uH" inputmode="decimal"></label>
+        <label>Weight now (kg)<input type="text" id="uW" step="0.1" inputmode="decimal"></label>
         <label class="full">Activity<select id="uAct">
           <option value="1.2">Sitting most of the day</option>
           <option value="1.375">Light: walks, 1–2 workouts/wk</option>
           <option value="1.55">Moderate: daily walks + lifting 3×/wk</option>
           <option value="1.725">Very active: training 5–6×/wk</option>
         </select></label>
-        <label>Goal weight (kg)<input type="number" id="uGoal" step="0.1" inputmode="decimal"></label>
+        <label>Goal weight (kg)<input type="text" id="uGoal" step="0.1" inputmode="decimal"></label>
         <label>Pace<select id="uPace">
           <option value="0.25">Gentle · 0.25 kg/wk</option>
           <option value="0.35">Steady · 0.35 kg/wk</option>
           <option value="0.5">Faster · 0.5 kg/wk</option>
         </select></label>
-        <label>Body fat % (optional)<input type="number" id="uBf" step="0.5" inputmode="decimal" placeholder="if you know it"></label>
+        <label>Body fat % (optional)<input type="text" id="uBf" step="0.5" inputmode="decimal" placeholder="if you know it"></label>
         <label>Protein (g per kg)<select id="uProt">
           <option value="1.6">1.6 · minimum</option>
           <option value="1.8">1.8 · best</option>
@@ -356,11 +360,11 @@ details summary{list-style:none}
       <details>
         <summary class="preview" style="cursor:pointer">Adjust numbers by hand</summary>
         <form class="grid" id="planForm" style="margin-top:10px">
-          <label>Calories low<input type="number" id="pLow" inputmode="numeric"></label>
-          <label>Calories high<input type="number" id="pHigh" inputmode="numeric"></label>
-          <label>Protein (g)<input type="number" id="pProt" inputmode="numeric"></label>
-          <label>Fibre (g)<input type="number" id="pFib" inputmode="numeric"></label>
-          <label>Start weight (kg)<input type="number" id="pStart" step="0.1" inputmode="decimal"></label>
+          <label>Calories low<input type="text" id="pLow" inputmode="numeric"></label>
+          <label>Calories high<input type="text" id="pHigh" inputmode="numeric"></label>
+          <label>Protein (g)<input type="text" id="pProt" inputmode="numeric"></label>
+          <label>Fibre (g)<input type="text" id="pFib" inputmode="numeric"></label>
+          <label>Start weight (kg)<input type="text" id="pStart" step="0.1" inputmode="decimal"></label>
           <label>Start date<input type="date" id="pDate"></label>
           <button class="btn ghost full" type="submit">Save my numbers</button>
         </form>
@@ -372,7 +376,7 @@ details summary{list-style:none}
       <div class="list" id="potList"></div>
       <form class="grid" id="potForm">
         <label>Name<input id="potName" placeholder="Big Dutch oven" required></label>
-        <label>Empty weight (g)<input type="number" id="potG" inputmode="numeric" required></label>
+        <label>Empty weight (g)<input type="text" id="potG" inputmode="numeric" required></label>
         <button class="btn ghost full" type="submit">Add pot</button>
       </form>
     </div>
@@ -423,7 +427,7 @@ details summary{list-style:none}
     <div id="m-lib" style="display:grid;gap:10px">
       <input type="search" id="aSearch" placeholder="Search your foods" aria-label="Search your foods">
       <div class="pick" id="aPick"></div>
-      <label><span id="aAmtLbl">Amount</span><input type="number" id="aAmt" step="any" inputmode="decimal"></label>
+      <label><span id="aAmtLbl">Amount</span><input type="text" id="aAmt" step="any" inputmode="decimal"></label>
       <div class="preview" id="aPrev">Pick a food</div>
     </div>
 
@@ -451,16 +455,16 @@ details summary{list-style:none}
       <label>Or type the number<input id="bcNum" inputmode="numeric" placeholder="e.g. 0772945910514"></label>
       <button class="btn ghost" id="bcLook">Look up</button>
       <div class="preview" id="bcOut"></div>
-      <label id="bcAmtWrap" hidden>Grams eaten<input type="number" id="bcAmt" step="any" inputmode="decimal"></label>
+      <label id="bcAmtWrap" hidden>Grams eaten<input type="text" id="bcAmt" step="any" inputmode="decimal"></label>
     </div>
 
     <form id="m-quick" class="grid" hidden>
       <label class="full">What was it<input id="qName" placeholder="Restaurant salad"></label>
-      <label>kcal<input type="number" id="qK" step="any" inputmode="decimal"></label>
-      <label>Protein g<input type="number" id="qP" step="any" inputmode="decimal"></label>
-      <label>Carbs g<input type="number" id="qC" step="any" inputmode="decimal"></label>
-      <label>Fat g<input type="number" id="qF" step="any" inputmode="decimal"></label>
-      <label>Fibre g<input type="number" id="qFb" step="any" inputmode="decimal"></label>
+      <label>kcal<input type="text" id="qK" step="any" inputmode="decimal"></label>
+      <label>Protein g<input type="text" id="qP" step="any" inputmode="decimal"></label>
+      <label>Carbs g<input type="text" id="qC" step="any" inputmode="decimal"></label>
+      <label>Fat g<input type="text" id="qF" step="any" inputmode="decimal"></label>
+      <label>Fibre g<input type="text" id="qFb" step="any" inputmode="decimal"></label>
     </form>
 
     <button class="btn" id="aAdd" disabled>Add to log</button>
@@ -476,12 +480,12 @@ details summary{list-style:none}
       <label class="full">Name<input id="fName" required placeholder="Chicken thigh, skinless (raw)"></label>
       <label>Values per<select id="fBasis"><option value="100g">100 g</option><option value="unit">1 piece</option></select></label>
       <label>Piece name<input id="fUnit" placeholder="egg, tsp, slice"></label>
-      <label>kcal<input type="number" id="fK" step="any" inputmode="decimal" required></label>
-      <label>Protein g<input type="number" id="fP" step="any" inputmode="decimal" required></label>
-      <label>Carbs g<input type="number" id="fC" step="any" inputmode="decimal"></label>
-      <label>Fat g<input type="number" id="fF" step="any" inputmode="decimal"></label>
-      <label>Fibre g<input type="number" id="fFb" step="any" inputmode="decimal"></label>
-      <label>Grams per piece<input type="number" id="fPieceG" step="any" inputmode="decimal" placeholder="optional"></label>
+      <label>kcal<input type="text" id="fK" step="any" inputmode="decimal" required></label>
+      <label>Protein g<input type="text" id="fP" step="any" inputmode="decimal" required></label>
+      <label>Carbs g<input type="text" id="fC" step="any" inputmode="decimal"></label>
+      <label>Fat g<input type="text" id="fF" step="any" inputmode="decimal"></label>
+      <label>Fibre g<input type="text" id="fFb" step="any" inputmode="decimal"></label>
+      <label>Grams per piece<input type="text" id="fPieceG" step="any" inputmode="decimal" placeholder="optional"></label>
       <label class="full">Food group<select id="fGroup"></select></label>
       <label class="full">Notes<input id="fNote" placeholder="Source, brand, label date"></label>
       <label class="chk full"><input type="checkbox" id="fFav"> ★ Favourite (shows first when adding food)</label>
@@ -510,7 +514,7 @@ details summary{list-style:none}
       <div class="preview" id="rRaw">Raw total: 0 g</div>
       <div class="grid">
         <label>Pot<select id="rPot"><option value="">No pot (enter cooked weight)</option></select></label>
-        <label><span id="rWLbl">Cooked weight (g)</span><input type="number" id="rW" step="any" inputmode="decimal" placeholder="weigh it"></label>
+        <label><span id="rWLbl">Cooked weight (g)</span><input type="text" id="rW" step="any" inputmode="decimal" placeholder="weigh it"></label>
       </div>
       <div class="preview" id="rPer">Per 100 g: –</div>
     </div>
@@ -525,7 +529,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · hey-siri";
+const VERSION = "v2026.10.22 · safe-save";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -562,8 +566,15 @@ async function api(action, payload, conn){
   if(!j.ok) throw new Error(j.error||"failed");
   return j;
 }
-function put(col,id,data){ DB[col][id]=data; saveDB(); Q.push({action:"put",collection:col,id,data}); saveQ(); flush(); }
-function del(col,id){ delete DB[col][id]; saveDB(); Q.push({action:"del",collection:col,id}); saveQ(); flush(); }
+// keys ("days/2026-10-22") changed on this device since the current load from the Sheet started
+const touched = new Set();
+let FAILED = LS.get("budgie-failed",{}); // key -> error, records the Sheet refused (kept on this device)
+function put(col,id,data){ if(id===""||id==null){ toast("Couldn't save: missing date or name"); return false; }
+  DB[col][id]=data; saveDB(); touched.add(col+"/"+id); Q.push({action:"put",collection:col,id,data}); saveQ(); flush(); return true; }
+function del(col,id){ delete DB[col][id]; saveDB(); touched.add(col+"/"+id); Q.push({action:"del",collection:col,id}); saveQ(); flush(); }
+// errors worth retrying later; anything else means the Sheet refused this one record
+const transient = m => /^(unreachable|not_public|bad_reply|bad_token|not_connected)$/.test(m) || /lock|timed? ?out|too many|quota|rate|busy|try again|service|internal|unavailable/i.test(m);
+const LABEL = {days:"food log for ",body:"weigh-in for ",foods:"food ",settings:"setting "};
 let flushing=false;
 async function flush(){
   if(flushing || !CONN || !CONN.url) { status(); return; }
@@ -574,30 +585,52 @@ async function flush(){
       const op=Q[0];
       const later=Q.findIndex((o,i)=>i>0 && o.collection===op.collection && o.id===op.id);
       if(later>0){ Q.shift(); saveQ(); continue; }
-      await api(op.action,{collection:op.collection,id:op.id,data:op.data});
+      try{ await api(op.action,{collection:op.collection,id:op.id,data:op.data}); delete FAILED[op.collection+"/"+op.id]; }
+      catch(e){
+        const m=String(e.message||e);
+        if(transient(m)) throw e;
+        // the Sheet refused this record: keep it on the phone, tell the user, and carry on with the rest
+        FAILED[op.collection+"/"+op.id]=m; LS.set("budgie-failed",FAILED);
+        const nm = op.collection==="foods" ? ((op.data&&op.data.name)||op.id) : op.id;
+        toast("Couldn't save "+(LABEL[op.collection]||"")+nm+" to the Sheet ("+m.slice(0,80)+"). It's kept on this phone.");
+      }
       Q.shift(); saveQ();
     }
+    LS.set("budgie-failed",FAILED);
   }catch(e){ console.warn("sync",e); }
   flushing=false; status();
 }
-async function syncDown(){
-  if(!CONN || !CONN.url) return;
+let syncing=null, syncAgain=false;
+function syncDown(){
+  if(!CONN || !CONN.url) return Promise.resolve();
+  if(syncing){ syncAgain=true; return syncing; }
+  syncing=(async()=>{
+    try{ await doSyncDown(); } finally { syncing=null; if(syncAgain){ syncAgain=false; syncDown(); } }
+  })();
+  return syncing;
+}
+async function doSyncDown(){
   try{
     await flush();
     if(Q.length) return;
+    touched.clear();
     const j = await api("load",{});
     const remote = normalizeRemote(j.data||{});
     const known = new Set(LS.get("budgie-known",[]));
+    const pending = new Set([...touched, ...Q.map(o=>o.collection+"/"+o.id)]);
     const next = {foods:{},days:{},body:{},settings:{}}, reup=[];
     ["foods","days","body","settings"].forEach(c=>{
       Object.assign(next[c], remote[c]);
+      // changes made here while the Sheet was loading win over the (older) Sheet copy
+      pending.forEach(k=>{ const [kc,...rest]=k.split("/"), id=rest.join("/"); if(kc!==c) return; if(id in DB[c]) next[c][id]=DB[c][id]; else delete next[c][id]; });
       // keep anything on this device the Sheet has never had (e.g. a failed upload) and send it again
-      Object.entries(DB[c]||{}).forEach(([id,data])=>{ if(!(id in next[c]) && !known.has(c+"/"+id)){ next[c][id]=data; reup.push({collection:c,id,data}); } });
+      Object.entries(DB[c]||{}).forEach(([id,data])=>{ const k=c+"/"+id; if(!(id in next[c]) && !known.has(k)){ next[c][id]=data; if(!FAILED[k]) reup.push({collection:c,id,data}); } });
     });
     DB=next; saveDB();
     LS.set("budgie-known",["foods","days","body","settings"].flatMap(c=>Object.keys(remote[c]).map(id=>c+"/"+id)));
     renderAll(); status(true);
-    if(reup.length){ reup.forEach(it=>Q.push({action:"put",...it})); saveQ(); flush(); }
+    if(reup.length){ reup.forEach(it=>Q.push({action:"put",...it})); saveQ(); }
+    if(Q.length) flush();
   }catch(e){ console.warn(e); status(); if(String(e.message)==="bad_token") toast("Sheet says the token is wrong. Check Settings."); }
 }
 // Google Sheets can turn ids like "2026-10-19" into dates; put each record back under its real key
@@ -614,11 +647,16 @@ function normalizeRemote(data){
 function status(justSynced){
   const s=$("status");
   if(!CONN || !CONN.url){ s.textContent="On this phone only"; s.className=""; return; }
-  if(Q.length){ s.textContent=Q.length+" change"+(Q.length>1?"s":"")+" waiting"; s.className="warn"; setTimeout(flush,15000); return; }
-  s.textContent = justSynced ? "Synced" : "Saved to Sheet"; s.className="";
+  if(Q.length){ s.textContent=Q.length+" change"+(Q.length>1?"s":"")+" waiting"; s.className="warn";
+    if(!status._t) status._t=setTimeout(()=>{ status._t=null; flush(); },15000); return; }
+  const nf=Object.keys(FAILED).length;
+  s.textContent = (justSynced ? "Synced" : "Saved to Sheet") + (nf ? " · "+nf+" couldn't save" : ""); s.className = nf?"warn":"";
 }
 window.addEventListener("online",flush);
+// pick up changes from other devices whenever Budgie comes back into view, and every minute while open
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") syncDown(); });
+window.addEventListener("focus",()=>syncDown());
+setInterval(()=>{ if(document.visibilityState==="visible" && !openSheetEl) syncDown(); },60000);
 
 const plan = () => ({...DEFAULT_PLAN,...(DB.settings.plan||{})});
 const pots = () => (DB.settings.pots && DB.settings.pots.pots) || [];
@@ -633,6 +671,11 @@ let openSheetEl=null;
 function openSheet(el){ closeSheet(); openSheetEl=el; $("scrim").hidden=false; el.hidden=false; }
 function closeSheet(){ if(openSheetEl) openSheetEl.hidden=true; openSheetEl=null; $("scrim").hidden=true; }
 $("scrim").onclick=closeSheet;
+// number fields: accept a comma as the decimal mark (Ukrainian/Russian keyboards) — "72,5" becomes 72.5
+document.addEventListener("input",e=>{ const t=e.target; if(t.matches&&t.matches('input[inputmode="decimal"],input[inputmode="numeric"]')&&t.value.includes(",")){ const p=t.selectionStart; t.value=t.value.replace(/,/g,"."); try{ t.setSelectionRange(p,p); }catch(_){} } },true);
+// forms the user is typing in: background syncs must not overwrite them
+const dirtyForms=new Set();
+["goalForm","profForm","planForm"].forEach(id=>{ $(id).addEventListener("input",()=>dirtyForms.add(id)); $(id).addEventListener("change",()=>dirtyForms.add(id)); });
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeSheet);
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeSheet(); });
 
@@ -766,7 +809,7 @@ function updAdd(){
   else if(MODE==="photo"||MODE==="say"){ ok = aiItems.some(i=>i.on); }
   else if(MODE==="barcode"){ ok = !!bcFood && parseFloat($("bcAmt").value)>0; }
   $("aAdd").disabled=!ok;
-  $("aAdd").textContent = editing?"Save changes":((MODE==="photo"||MODE==="say")&&aiItems.length? "Save "+aiItems.filter(i=>i.on).length+" to log" : "Add to log");
+  $("aAdd").textContent = editing?"Save changes":((MODE==="photo"||MODE==="say")&&aiItems.length? "Add "+aiItems.filter(i=>i.on).length+" to log" : "Add to log");
 }
 $("aAdd").onclick=()=>{
   const meal=$("aMeal").value, cur=dayEntries();
@@ -815,25 +858,34 @@ $("phGo").onclick=async()=>{
       toast("Check the numbers, then save");
     } else {
       const j=await askAI(PHOTO_SYS,"User's library:\n"+libraryIndex()+"\n\nUser's note: "+($("phNote").value||"(none)"),imgs);
-      aiItems=(j.items||[]).map(i=>({...i,grams:Math.round(+i.grams||0),on:true}));
-      renderAiItems(); $("phNoteOut").textContent=j.note||"";
+      aiItems=(j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
+      renderAiItems(); $("phNoteOut").textContent=j.note||""; $("aAdd").scrollIntoView({block:"nearest"});
     }
   }catch(e){ toast(e.message||"Photo analysis failed"); }
   btn.disabled=false; btn.textContent="Analyze again";
 };
+// numbers for one reviewed item: from the library when it matched, otherwise the AI's estimate
 function aiItemVals(i){ const f=i.libraryId&&DB.foods[i.libraryId];
   if(f&&f.basis==="unit"&&i.pieces>0) return calc(f,i.pieces);
-  if(f&&f.basis!=="unit"&&i.grams>0) return calc(f,i.grams); return i; }
+  if(f&&f.basis!=="unit"&&i.grams>0) return calc(f,i.grams);
+  const o={}; NUT.forEach(k=>o[k]=r1(i[k])); return o; }
+// AI sometimes gives grams for a food you count in pieces: turn it into pieces when we know the piece weight
+function fixPieces(i){ const f=i.libraryId&&DB.foods[i.libraryId];
+  if(f&&f.basis==="unit"&&!(i.pieces>0)) i.pieces = f.pieceG&&i.grams>0 ? Math.max(1,Math.round(i.grams/f.pieceG*2)/2) : 1;
+  return i; }
+const macLine = v => `${fmt(v.kcal)} kcal · P ${r1(v.p)} · C ${r1(v.c)} · F ${r1(v.f)} · fibre ${r1(v.fb)}`;
 function renderAiItems(){
-  const out=$(MODE==="say"?"sayOut":"phOut"); out.hidden=!aiItems.length && MODE!=="say";
-  const tot=totals(aiItems.filter(i=>i.on).map(aiItemVals));
-  out.innerHTML = aiItems.length ? aiItems.map((i,n)=>{ const v=aiItemVals(i), f=i.libraryId&&DB.foods[i.libraryId], unit=f&&f.basis==="unit";
-    return `<div class="ai-item"><input type="checkbox" data-n="${n}" ${i.on?"checked":""} aria-label="Include ${esc(i.name)}"><div><b>${esc(f?f.name:i.name)}</b><small>${fmt(v.kcal)} kcal · ${r1(v.p)} g P · ${f?"from your library":"estimated"}</small></div><label style="font-size:.72rem">${unit?(f.unit||"pieces"):"grams"}<input type="number" data-g="${n}" value="${unit?(i.pieces||""):(i.grams||"")}" inputmode="decimal" step="any"></label></div>`;}).join("")
-      + `<div class="ai-item" style="grid-template-columns:1fr"><b>Total: ${fmt(tot.kcal)} kcal · ${Math.round(tot.p)} g protein</b></div>`
+  const out=$(MODE==="say"?"sayOut":"phOut");
+  const on=aiItems.filter(i=>i.on), tot=totals(on.map(aiItemVals));
+  out.innerHTML = aiItems.length
+    ? `<div class="ai-head">Check it, then tap Add. Nothing is in your log yet.</div>`
+      + aiItems.map((i,n)=>{ const v=aiItemVals(i), f=i.libraryId&&DB.foods[i.libraryId], unit=f&&f.basis==="unit";
+        return `<div class="ai-item${i.on?"":" off"}" data-item="${n}"><input type="checkbox" data-n="${n}" ${i.on?"checked":""} aria-label="Include ${esc(f?f.name:i.name)}"><div><b>${esc(f?f.name:i.name)}</b><small class="mac">${macLine(v)}</small><small>${f?"from your library":"estimated"}${unit&&f.pieceG?" · "+fmt(i.pieces*f.pieceG)+" g":""}</small></div><label style="font-size:.72rem">${unit?(f.unit||"pieces"):"grams"}<input type="text" data-g="${n}" value="${unit?(i.pieces||""):(i.grams||"")}" inputmode="decimal" aria-label="${unit?"How many":"Grams"} of ${esc(f?f.name:i.name)}"></label></div>`;}).join("")
+      + `<div class="ai-total"><b>Total: ${macLine(tot)}</b></div>`
     : (MODE==="say"?"":`<div class="empty">I couldn't spot any food. Try another photo or add a note.</div>`);
-  out.hidden=!aiItems.length;
+  out.hidden = !out.innerHTML;
   out.querySelectorAll("[data-n]").forEach(c=>c.onchange=()=>{ aiItems[c.dataset.n].on=c.checked; renderAiItems(); });
-  out.querySelectorAll("[data-g]").forEach(inp=>inp.onchange=()=>{ const i=aiItems[inp.dataset.g], g=parseFloat(inp.value)||0, f=i.libraryId&&DB.foods[i.libraryId];
+  out.querySelectorAll("[data-g]").forEach(inp=>inp.onchange=()=>{ const i=aiItems[inp.dataset.g], g=parseFloat(String(inp.value).replace(",","."))||0, f=i.libraryId&&DB.foods[i.libraryId];
     if(f&&f.basis==="unit"){ i.pieces=g; }
     else { if(!f && i.grams>0){ const s=g/i.grams; NUT.forEach(k=>i[k]=(+i[k]||0)*s); } i.grams=g; }
     renderAiItems(); });
@@ -852,9 +904,9 @@ async function understandSay(){
   const b=$("sayGo"); b.disabled=true; b.innerHTML='<span class="spin"></span>Understanding…';
   try{
     const j=await askAI(SAY_SYS,"User's library:\n"+libraryIndex()+"\n\nWhat they said:\n"+text,[]);
-    aiItems=(j.items||[]).map(i=>({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
+    aiItems=(j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
     if(j.meal && !editing) $("aMeal").value=j.meal;
-    $("sayNote").textContent=j.note||""; renderAiItems();
+    $("sayNote").textContent=j.note||""; renderAiItems(); $("aAdd").scrollIntoView({block:"nearest"});
     if(!aiItems.length) toast("I couldn't find any food in that. Try again?");
   }catch(e){ toast(e.message||"Couldn't understand that"); }
   b.disabled=false; b.textContent="Understand again";
@@ -944,7 +996,7 @@ function openFood(f){
   if(!$("fNote").value && typeof f.recipe==="string") $("fNote").value=f.recipe;
   $("fFav").checked=!!f.fav; $("fGroup").value=f.group||"Other";
   $("fDel").hidden=!editFood;
-  openSheet($("foodSheet")); setTimeout(()=>$("fName").focus(),60);
+  openSheet($("foodSheet")); if(!editFood) setTimeout(()=>{ if(!$("foodSheet").contains(document.activeElement)) $("fName").focus(); },60);
 }
 $("newFood").onclick=()=>openFood();
 $("foodForm").onsubmit=e=>{ e.preventDefault();
@@ -952,7 +1004,7 @@ $("foodForm").onsubmit=e=>{ e.preventDefault();
   const base=editFood||{};
   const f={...base,id:base.id||slug($("fName").value),name:$("fName").value.trim(),basis:$("fBasis").value,unit:$("fUnit").value.trim(),kcal:n($("fK").value),p:n($("fP").value),c:n($("fC").value),f:n($("fF").value),fb:n($("fFb").value)};
   if($("fPieceG").value) f.pieceG=+$("fPieceG").value; else delete f.pieceG;
-  if($("fNote").value) f.note=$("fNote").value.trim();
+  if($("fNote").value.trim()) f.note=$("fNote").value.trim(); else delete f.note;
   f.fav=$("fFav").checked; f.group=$("fGroup").value;
   put("foods",f.id,f); renderFoods(); renderPick(); closeSheet(); toast(editFood?"Food updated":"Food saved");
 };
@@ -980,8 +1032,8 @@ $("rPot").onchange=()=>{ REC.pot=$("rPot").value; updRec(); };
 $("rW").oninput=()=>{ REC.weight=$("rW").value; updRec(); };
 function renderRec(){
   $("rIngs").innerHTML = REC.ings.length ? REC.ings.map((g,n)=>{ const f=g.foodId&&DB.foods[g.foodId]; const v=ingVals(g); const unit=(f?f.basis:g.basis)==="unit";
-    return `<div class="ing"><div><b>${esc(f?f.name:g.name)}</b><small>${fmt(v.kcal)} kcal · ${v.p} P${f?"":" · not in library"}</small></div><input type="number" data-a="${n}" value="${g.amount??""}" step="any" inputmode="decimal" aria-label="${unit?"Pieces":"Grams"}" placeholder="${unit?"pcs":"g"}"><button class="x" data-rm="${n}" aria-label="Remove">×</button>${
-      f?"":`<div class="per">${NUT.map(k=>`<label>${k==="kcal"?"kcal":k==="fb"?"fibre":k.toUpperCase()}/100g<input type="number" data-n="${n}" data-k="${k}" value="${g.per&&g.per[k]!=null?g.per[k]:""}" step="any" inputmode="decimal"></label>`).join("")}</div>`}</div>`; }).join("")
+    return `<div class="ing"><div><b>${esc(f?f.name:g.name)}</b><small>${fmt(v.kcal)} kcal · ${v.p} P${f?"":" · not in library"}</small></div><input type="text" data-a="${n}" value="${g.amount??""}" step="any" inputmode="decimal" aria-label="${unit?"Pieces":"Grams"}" placeholder="${unit?"pcs":"g"}"><button class="x" data-rm="${n}" aria-label="Remove">×</button>${
+      f?"":`<div class="per">${NUT.map(k=>`<label>${k==="kcal"?"kcal":k==="fb"?"fibre":k.toUpperCase()}/100g<input type="text" data-n="${n}" data-k="${k}" value="${g.per&&g.per[k]!=null?g.per[k]:""}" step="any" inputmode="decimal"></label>`).join("")}</div>`}</div>`; }).join("")
     : `<div class="empty">No ingredients yet. Fill from a photo, paste a list, or search your library below.</div>`;
   $("rIngs").querySelectorAll("[data-a]").forEach(i=>i.oninput=()=>{ REC.ings[i.dataset.a].amount=parseFloat(i.value)||0; updRec(); });
   $("rIngs").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{ REC.ings.splice(+b.dataset.rm,1); renderRec(); });
@@ -1104,8 +1156,8 @@ function renderBody(){
   // goal card
   $("gNow").textContent = now?now.toFixed(1):"–";
   $("gNowD").textContent = latest?"kg · "+parse(latest.date).toLocaleDateString("en-CA",{month:"short",day:"numeric"}):"no weigh-ins yet";
-  if(document.activeElement!==$("gGoal")) $("gGoal").value = P.goalKg??"";
-  $("gSave").hidden = true;
+  if(!dirtyForms.has("goalForm") && document.activeElement!==$("gGoal")) $("gGoal").value = P.goalKg??"";
+  { const g=parseFloat($("gGoal").value); $("gSave").hidden = !(g>0) || g===P.goalKg; }
   if(now && P.goalKg){
     const toGo=Math.max(0,now-P.goalKg), total=Math.max(0.1,(start||now)-P.goalKg), pct=Math.max(0,Math.min(100,((start||now)-now)/total*100));
     $("gToGo").textContent=toGo.toFixed(1); $("gToGoSub").textContent="kg";
@@ -1146,7 +1198,7 @@ function renderBody(){
 }
 $("gGoal").oninput=()=>{ $("gSave").hidden = parseFloat($("gGoal").value)===plan().goalKg; };
 $("goalForm").onsubmit=e=>{ e.preventDefault(); const g=parseFloat($("gGoal").value); if(!(g>30&&g<250)){ toast("Enter your goal in kg"); return; }
-  const P=plan(); put("settings","plan",{...P,goalKg:g,startKg:P.startKg||latestKg(),startDate:P.startDate||(weighIns()[0]||{}).date||todayIso()}); $("gGoal").blur(); renderAll(); toast("Goal set: "+g+" kg"); };
+  const P=plan(); put("settings","plan",{...P,goalKg:g,startKg:P.startKg||latestKg(),startDate:P.startDate||(weighIns()[0]||{}).date||todayIso()}); dirtyForms.delete("goalForm"); $("gGoal").blur(); renderAll(); toast("Goal set: "+g+" kg"); };
 function drawChart(w,P,start){
   const svg=$("chart"), W=340,H=170,L=34,R=12,T=14,B=24, css=getComputedStyle(document.documentElement), col=v=>css.getPropertyValue(v).trim();
   if(!w.length){ svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="12" fill="${col("--muted")}">Your weekly weigh-ins appear here</text>`; return; }
@@ -1165,7 +1217,8 @@ function drawChart(w,P,start){
 }
 $("bDate").value=todayIso();
 $("bodyForm").onsubmit=e=>{ e.preventDefault();
-  const d=$("bDate").value, rec={...(DB.body[d]||{}),date:d}; const kg=parseFloat($("bKg").value), wa=parseFloat($("bWa").value), hi=parseFloat($("bHi").value);
+  const d=$("bDate").value; if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ toast("Pick a date first"); return; }
+  const rec={...(DB.body[d]||{}),date:d}; const kg=parseFloat($("bKg").value), wa=parseFloat($("bWa").value), hi=parseFloat($("bHi").value);
   if(kg>0) rec.kg=kg; if(wa>0) rec.waist=wa; if(hi>0) rec.hips=hi;
   if(!(rec.kg||rec.waist||rec.hips)){ toast("Enter at least one number"); return; }
   put("body",d,rec); ["bKg","bWa","bHi"].forEach(i=>$(i).value=""); renderBody(); toast("Weigh-in saved");
@@ -1174,7 +1227,8 @@ $("bodyForm").onsubmit=e=>{ e.preventDefault();
 /* ================= settings ================= */
 function fillPlan(){
   const P=plan(), u=P.profile||{};
-  $("pLow").value=P.kcalLow; $("pHigh").value=P.kcalHigh; $("pProt").value=P.protein; $("pFib").value=P.fibre; $("pStart").value=P.startKg??""; $("pDate").value=P.startDate||"";
+  if(!dirtyForms.has("planForm")){ $("pLow").value=P.kcalLow; $("pHigh").value=P.kcalHigh; $("pProt").value=P.protein; $("pFib").value=P.fibre; $("pStart").value=P.startKg??""; $("pDate").value=P.startDate||""; }
+  if(dirtyForms.has("profForm")) return;
   $("uSex").value=u.sex||"f"; $("uAge").value=u.age??""; $("uH").value=u.height??""; $("uW").value=latestKg()??u.weight??"";
   $("uAct").value=String(u.activity||1.55); $("uGoal").value=P.goalKg??""; $("uPace").value=String(P.pace||0.35); $("uBf").value=u.bf||""; $("uProt").value=String(u.prot||1.8);
 }
@@ -1197,11 +1251,11 @@ $("profForm").onsubmit=e=>{ e.preventDefault();
   </div>`;
   $("usePlan").onclick=()=>{ const P=plan(), goal=parseFloat($("uGoal").value)||P.goalKg;
     put("settings","plan",{...P,kcalLow:c.kcalLow,kcalHigh:c.kcalHigh,protein:c.protein,fat:c.fat,carbs:c.carbs,fibre:c.fibre,pace:u.pace,goalKg:goal,startKg:P.startKg||u.weight,startDate:P.startDate||todayIso(),profile:u,calc:{bmr:c.bmr,tdee:c.tdee,method:c.method,measured:!!c.measured,on:todayIso()}});
-    renderAll(); $("calcOut").hidden=true; toast("Plan updated: "+fmt(c.kcalLow)+"–"+fmt(c.kcalHigh)+" kcal, "+c.protein+" g protein"); };
+    dirtyForms.delete("profForm"); dirtyForms.delete("planForm"); renderAll(); $("calcOut").hidden=true; toast("Plan updated: "+fmt(c.kcalLow)+"–"+fmt(c.kcalHigh)+" kcal, "+c.protein+" g protein"); };
 };
 $("planForm").onsubmit=e=>{ e.preventDefault(); const P=plan(), n=(id,d)=>$(id).value===""?d:+$(id).value;
   put("settings","plan",{...P,kcalLow:n("pLow",P.kcalLow),kcalHigh:n("pHigh",P.kcalHigh),protein:n("pProt",P.protein),fibre:n("pFib",P.fibre),fat:null,carbs:null,startKg:n("pStart",null),startDate:$("pDate").value||null});
-  renderAll(); toast("Plan saved"); };
+  dirtyForms.delete("planForm"); renderAll(); toast("Plan saved"); };
 function renderPots(){
   const ps=pots();
   $("potList").innerHTML = ps.length ? ps.map((p,i)=>`<div class="item"><div class="nm" style="cursor:default"><b>${esc(p.name)}</b><small>empty</small></div><div class="kc">${fmt(p.g)} g</div><button class="x" data-pot="${i}" aria-label="Delete ${esc(p.name)}">×</button></div>`).join("") : `<div class="empty">No pots saved yet.</div>`;
@@ -1223,7 +1277,9 @@ $("impFile").onchange=async e=>{
     const j=JSON.parse(await file.text()); const items=[];
     ["foods","days","body","settings"].forEach(c=>Object.entries(j[c]||{}).forEach(([id,data])=>{ DB[c][id]=data; items.push({collection:c,id,data}); }));
     saveDB(); renderAll(); toast("Imported "+items.length+" records");
-    if(CONN&&CONN.url){ for(let i=0;i<items.length;i+=40){ try{ await api("bulk",{items:items.slice(i,i+40)}); }catch(err){ items.slice(i).forEach(it=>Q.push({action:"put",...it})); saveQ(); status(); break; } } toast("Import saved to your Sheet"); }
+    if(CONN&&CONN.url){ let waiting=0;
+      for(let i=0;i<items.length;i+=40){ try{ await api("bulk",{items:items.slice(i,i+40)}); }catch(err){ const rest=items.slice(i); rest.forEach(it=>Q.push({action:"put",...it})); waiting=rest.length; saveQ(); status(); break; } }
+      toast(waiting ? "Imported "+items.length+" records. "+waiting+" are waiting for the Sheet and will upload when it's reachable." : "Import saved to your Sheet"); }
   }catch(err){ toast("That file isn't a Budgie backup"); }
   e.target.value="";
 };

@@ -1,26 +1,92 @@
-name: Deploy to GitHub Pages
+name: Test and deploy
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
+  qa:
+    name: QA (smoke, then full)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci || npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke tests
+        run: npx playwright test --grep @smoke
+      - name: Full tests
+        run: npx playwright test --grep-invert @live
+      - name: QA report
+        if: always()
+        run: node report.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-report
+          path: qa/results/
+
   deploy:
+    name: Deploy to GitHub Pages
+    needs: qa
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Collect the app files (no tests)
+        run: |
+          mkdir _site
+          cp -r index.html version.json manifest.json favicon.svg favicon-32.png apple-touch-icon.png icon-192.png icon-512.png previews _site/
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  live-check:
+    name: Smoke test the live site
+    needs: deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci || npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Wait for the new version to be live
+        run: |
+          want=$(node -p "require('../version.json').version")
+          for i in $(seq 1 30); do
+            got=$(curl -s "https://kseniyavarta-ai.github.io/budgie_nutrition/version.json?t=$(date +%s)" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).version)}catch(e){console.log('')}})")
+            [ "$got" = "$want" ] && echo "live: $got" && exit 0
+            sleep 10
+          done
+          echo "Live site still shows '$got', expected '$want'"; exit 1
+      - name: Live smoke tests
+        run: LIVE=1 APP= npx playwright test --grep @live
+      - name: QA report
+        if: always()
+        run: node report.mjs

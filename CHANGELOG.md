@@ -2,7 +2,8 @@
 
 | Date | Label | What changed | Status |
 |---|---|---|---|
-| 2026-10-22 | hey-siri | Siri Shortcut support: opening Budgie with #say jumps straight to voice logging; #say=<what you said> fills it in and pre-saves the entries for approval. | **Live** |
+| 2026-10-22 | safe-save | Save fixes: food added while Budgie was syncing no longer disappears; picks up entries from your other devices when you come back to it (and every minute); one record the Sheet refuses no longer blocks every later save; typing in Goal and Plan isn't wiped by a background sync; comma decimals (72,5) work; clearing a food's note works; empty weigh-in date refused; honest import message. Say/Photo review card now shows grams, kcal, protein, carbs, fat and fibre per item before you tap Add. New QA suite (qa/) runs before every deploy and smoke-tests the live site after. | **Live** |
+| 2026-10-22 | hey-siri | Siri Shortcut support: opening Budgie with #say jumps straight to voice logging; #say=<what you said> fills it in and pre-saves the entries for approval. | Replaced by safe-save |
 | 2026-10-22 | say-it-2 | "New version" banner: Budgie checks for updates when you open it and offers a one-tap refresh. | Replaced by hey-siri |
 | 2026-10-22 | say-it | New 🎤 Say mode: talk or type what you ate; Claude splits it into foods, matches your library, picks the meal, and shows a ready-to-save list with a total. Edit grams or pieces, untick anything wrong, tap Save. | Replaced by say-it-2 |
 | 2026-10-22 | sync-fix | Fix: Google Sheets turned date ids (2026-10-19) into dates, so days and weigh-ins loaded under the wrong key and looked empty. App now maps them back; Code.gs keeps ids as text. Sync no longer drops records that never reached the Sheet. | Replaced by say-it |

@@ -1,0 +1,12 @@
+{
+  "name": "budgie-qa",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke": "playwright test --grep @smoke",
+    "full": "playwright test --grep-invert @live",
+    "live": "LIVE=1 APP= playwright test --grep @live",
+    "report": "node report.mjs"
+  },
+  "devDependencies": { "@playwright/test": "1.56.0" }
+}
