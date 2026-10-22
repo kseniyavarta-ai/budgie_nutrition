@@ -139,6 +139,9 @@ textarea{resize:vertical;min-height:60px}
 .preview{font:500 .88rem var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 .chk{display:flex;gap:8px;align-items:center;font-size:.9rem;color:var(--ink)}
 .chk input{width:auto}
+.btn.mic{font-size:1.05rem;padding:16px}
+.btn.mic.on{background:var(--over);color:#fff;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.75}}
 .ai-item{display:grid;grid-template-columns:auto minmax(0,1fr) 84px;gap:8px;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
 .ai-item:first-child{border-top:0}
 .ai-item input[type=checkbox]{width:auto}
@@ -410,6 +413,7 @@ details summary{list-style:none}
     </select></label>
     <div class="seg" id="modeSeg">
       <button aria-pressed="true" data-m="lib">Library</button>
+      <button aria-pressed="false" data-m="say">🎤 Say</button>
       <button aria-pressed="false" data-m="photo">Photo</button>
       <button aria-pressed="false" data-m="barcode">Barcode</button>
       <button aria-pressed="false" data-m="quick">Quick</button>
@@ -420,6 +424,15 @@ details summary{list-style:none}
       <div class="pick" id="aPick"></div>
       <label><span id="aAmtLbl">Amount</span><input type="number" id="aAmt" step="any" inputmode="decimal"></label>
       <div class="preview" id="aPrev">Pick a food</div>
+    </div>
+
+    <div id="m-say" hidden style="display:grid;gap:10px">
+      <button class="btn mic" id="sayMic" type="button" hidden>🎤 Tap and tell me what you ate</button>
+      <label><span id="sayLbl">What did you eat?</span><textarea id="sayText" rows="3" placeholder="e.g. two eggs, 50 grams of avocado and one cottage cheese bagel, about 85 grams"></textarea></label>
+      <p class="note" id="sayTip">Tip: tap the 🎤 on your keyboard and just talk. Say amounts when you know them; I'll estimate the rest.</p>
+      <button class="btn ghost" id="sayGo">Understand it</button>
+      <div class="list" id="sayOut" hidden></div>
+      <div class="preview" id="sayNote"></div>
     </div>
 
     <div id="m-photo" hidden style="display:grid;gap:10px">
@@ -510,7 +523,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · sync-fix";
+const VERSION = "v2026.10.22 · say-it";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -692,7 +705,8 @@ let MODE="lib", picked=null, editing=null, photos=[], aiItems=[], bcFood=null;
 function setMode(m){
   MODE=m;
   document.querySelectorAll("#modeSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m));
-  ["lib","photo","barcode","quick"].forEach(k=>{ const el=$("m-"+k); el.hidden=k!==m; if(k==="lib"||k==="photo"||k==="barcode") el.style.display = k===m?"grid":"none"; });
+  ["lib","say","photo","barcode","quick"].forEach(k=>{ const el=$("m-"+k); el.hidden=k!==m; if(k!=="quick") el.style.display = k===m?"grid":"none"; });
+  if(m!=="say") stopMic();
   updAdd();
 }
 document.querySelectorAll("#modeSeg button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
@@ -704,6 +718,7 @@ function openAdd(entry){
   ["aSearch","aAmt","qName","qK","qP","qC","qF","qFb","phNote","bcNum","bcAmt"].forEach(i=>$(i).value="");
   $("phLabel").checked=false; $("phOut").hidden=true; $("phOut").innerHTML=""; $("phNoteOut").textContent=""; $("phCount").textContent="No photos yet"; $("phGo").disabled=true;
   $("bcOut").textContent=""; $("bcAmtWrap").hidden=true;
+  $("sayText").value=""; $("sayOut").hidden=true; $("sayOut").innerHTML=""; $("sayNote").textContent=""; $("sayGo").textContent="Understand it";
   $("addTitle").textContent = editing?"Edit entry":"Add food";
   $("aAdd").textContent = editing?"Save changes":"Add to log";
   $("aDel").hidden=!editing;
@@ -746,10 +761,10 @@ function updAdd(){
     if(picked && a>0){ const v=calc(picked,a); $("aPrev").textContent=`${fmt(v.kcal)} kcal · ${v.p} P · ${v.c} C · ${v.f} F · ${v.fb} fibre`; ok=true; }
     else $("aPrev").textContent = picked?"Enter an amount":"Pick a food";
   } else if(MODE==="quick"){ ok = !!$("qName").value.trim() && $("qK").value!==""; }
-  else if(MODE==="photo"){ ok = aiItems.some(i=>i.on); }
+  else if(MODE==="photo"||MODE==="say"){ ok = aiItems.some(i=>i.on); }
   else if(MODE==="barcode"){ ok = !!bcFood && parseFloat($("bcAmt").value)>0; }
   $("aAdd").disabled=!ok;
-  $("aAdd").textContent = editing?"Save changes":(MODE==="photo"&&aiItems.length? "Add "+aiItems.filter(i=>i.on).length+" to log" : "Add to log");
+  $("aAdd").textContent = editing?"Save changes":((MODE==="photo"||MODE==="say")&&aiItems.length? "Save "+aiItems.filter(i=>i.on).length+" to log" : "Add to log");
 }
 $("aAdd").onclick=()=>{
   const meal=$("aMeal").value, cur=dayEntries();
@@ -760,11 +775,13 @@ $("aAdd").onclick=()=>{
   } else if(MODE==="quick"){
     const v={}; NUT.forEach((k,i)=>v[k]=r1(+$(["qK","qP","qC","qF","qFb"][i]).value||0));
     add=[{id:editing?editing.id:uid(),meal,name:$("qName").value.trim(),amountLabel:"quick entry",...v}];
-  } else if(MODE==="photo"){
+  } else if(MODE==="photo"||MODE==="say"){
+    const src = MODE==="say" ? "said" : "from photo";
     add=aiItems.filter(i=>i.on).map(i=>{
       const f=i.libraryId&&DB.foods[i.libraryId];
-      if(f && f.basis!=="unit") return {id:uid(),meal,foodId:f.id,name:f.name,amount:i.grams,amountLabel:i.grams+" g · from photo",...calc(f,i.grams)};
-      return {id:uid(),meal,name:i.name,amountLabel:(i.grams?i.grams+" g · ":"")+"from photo",kcal:r1(i.kcal),p:r1(i.p),c:r1(i.c),f:r1(i.f),fb:r1(i.fb)};
+      if(f && f.basis==="unit" && i.pieces>0) return {id:uid(),meal,foodId:f.id,name:f.name,amount:i.pieces,amountLabel:i.pieces+" × "+(f.unit||"piece")+" · "+src,...calc(f,i.pieces)};
+      if(f && f.basis!=="unit" && i.grams>0) return {id:uid(),meal,foodId:f.id,name:f.name,amount:i.grams,amountLabel:i.grams+" g · "+src,...calc(f,i.grams)};
+      return {id:uid(),meal,name:i.name,amountLabel:(i.grams?i.grams+" g · ":"")+src,kcal:r1(i.kcal),p:r1(i.p),c:r1(i.c),f:r1(i.f),fb:r1(i.fb)};
     });
   } else if(MODE==="barcode"){
     const a=parseFloat($("bcAmt").value);
@@ -802,18 +819,60 @@ $("phGo").onclick=async()=>{
   }catch(e){ toast(e.message||"Photo analysis failed"); }
   btn.disabled=false; btn.textContent="Analyze again";
 };
-function aiItemVals(i){ const f=i.libraryId&&DB.foods[i.libraryId]; if(f&&f.basis!=="unit"&&i.grams>0) return calc(f,i.grams); return i; }
+function aiItemVals(i){ const f=i.libraryId&&DB.foods[i.libraryId];
+  if(f&&f.basis==="unit"&&i.pieces>0) return calc(f,i.pieces);
+  if(f&&f.basis!=="unit"&&i.grams>0) return calc(f,i.grams); return i; }
 function renderAiItems(){
-  const out=$("phOut"); out.hidden=!aiItems.length;
-  out.innerHTML = aiItems.length ? aiItems.map((i,n)=>{ const v=aiItemVals(i), f=i.libraryId&&DB.foods[i.libraryId];
-    return `<div class="ai-item"><input type="checkbox" data-n="${n}" ${i.on?"checked":""} aria-label="Include ${esc(i.name)}"><div><b>${esc(f?f.name:i.name)}</b><small>${fmt(v.kcal)} kcal · ${r1(v.p)} g P${f?" · from your library":""}</small></div><input type="number" data-g="${n}" value="${i.grams||""}" inputmode="decimal" aria-label="Grams"></div>`;}).join("")
-    : `<div class="empty">I couldn't spot any food. Try another photo or add a note.</div>`;
-  out.querySelectorAll("[data-n]").forEach(c=>c.onchange=()=>{ aiItems[c.dataset.n].on=c.checked; updAdd(); });
-  out.querySelectorAll("[data-g]").forEach(inp=>inp.onchange=()=>{ const i=aiItems[inp.dataset.g], g=parseFloat(inp.value)||0;
-    if(!(i.libraryId&&DB.foods[i.libraryId]) && i.grams>0){ const s=g/i.grams; NUT.forEach(k=>i[k]=(+i[k]||0)*s); }
-    i.grams=g; renderAiItems(); });
+  const out=$(MODE==="say"?"sayOut":"phOut"); out.hidden=!aiItems.length && MODE!=="say";
+  const tot=totals(aiItems.filter(i=>i.on).map(aiItemVals));
+  out.innerHTML = aiItems.length ? aiItems.map((i,n)=>{ const v=aiItemVals(i), f=i.libraryId&&DB.foods[i.libraryId], unit=f&&f.basis==="unit";
+    return `<div class="ai-item"><input type="checkbox" data-n="${n}" ${i.on?"checked":""} aria-label="Include ${esc(i.name)}"><div><b>${esc(f?f.name:i.name)}</b><small>${fmt(v.kcal)} kcal · ${r1(v.p)} g P · ${f?"from your library":"estimated"}</small></div><label style="font-size:.72rem">${unit?(f.unit||"pieces"):"grams"}<input type="number" data-g="${n}" value="${unit?(i.pieces||""):(i.grams||"")}" inputmode="decimal" step="any"></label></div>`;}).join("")
+      + `<div class="ai-item" style="grid-template-columns:1fr"><b>Total: ${fmt(tot.kcal)} kcal · ${Math.round(tot.p)} g protein</b></div>`
+    : (MODE==="say"?"":`<div class="empty">I couldn't spot any food. Try another photo or add a note.</div>`);
+  out.hidden=!aiItems.length;
+  out.querySelectorAll("[data-n]").forEach(c=>c.onchange=()=>{ aiItems[c.dataset.n].on=c.checked; renderAiItems(); });
+  out.querySelectorAll("[data-g]").forEach(inp=>inp.onchange=()=>{ const i=aiItems[inp.dataset.g], g=parseFloat(inp.value)||0, f=i.libraryId&&DB.foods[i.libraryId];
+    if(f&&f.basis==="unit"){ i.pieces=g; }
+    else { if(!f && i.grams>0){ const s=g/i.grams; NUT.forEach(k=>i[k]=(+i[k]||0)*s); } i.grams=g; }
+    renderAiItems(); });
   updAdd();
 }
+
+/* ----- say it (voice or typed) ----- */
+const SAY_SYS = `You turn a spoken or typed description of a meal into food-log entries for a nutritionist's app. The text may come from dictation, so expect filler words and odd spelling.
+Split it into separate foods. Use amounts the person said; convert spoken units to grams (a tablespoon of oil 13.5 g, a slice of bread 35 g, half an avocado 70 g edible, a handful of nuts 28 g, a cup of cooked rice 160 g, a medium apple 182 g). If no amount is given, assume a typical single portion and say so in the note.
+Match each food to the user's library when it is clearly the same food (library lines are "id | name | basis") and return its libraryId. For a library food whose basis is "per <piece>", return "pieces" (a count) instead of grams.
+For every item also give kcal, protein p, carbs c, fat f and fibre fb in grams FOR THAT PORTION.
+If the person says which meal it was (breakfast, lunch, dinner, dessert, snack), return it as "meal" (breakfast|lunch|dinner|dessert|other), otherwise null.
+Return ONLY JSON: {"meal":null,"items":[{"name":"","grams":0,"pieces":null,"libraryId":null,"kcal":0,"p":0,"c":0,"f":0,"fb":0}],"note":"one short sentence about anything you assumed"}`;
+async function understandSay(){
+  const text=$("sayText").value.trim(); if(!text){ toast("Tell me what you ate first"); return; }
+  const b=$("sayGo"); b.disabled=true; b.innerHTML='<span class="spin"></span>Understanding…';
+  try{
+    const j=await askAI(SAY_SYS,"User's library:\n"+libraryIndex()+"\n\nWhat they said:\n"+text,[]);
+    aiItems=(j.items||[]).map(i=>({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
+    if(j.meal && !editing) $("aMeal").value=j.meal;
+    $("sayNote").textContent=j.note||""; renderAiItems();
+    if(!aiItems.length) toast("I couldn't find any food in that. Try again?");
+  }catch(e){ toast(e.message||"Couldn't understand that"); }
+  b.disabled=false; b.textContent="Understand again";
+}
+$("sayGo").onclick=understandSay;
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+var rec=null, recOn=false;
+if(SR){ $("sayMic").hidden=false; $("sayTip").textContent="Tap the big button and talk, then tap it again. Or type, or use the 🎤 on your keyboard."; }
+function stopMic(){ if(rec&&recOn){ try{ rec.stop(); }catch(e){} } }
+$("sayMic").onclick=()=>{
+  if(recOn){ stopMic(); return; }
+  try{
+    rec=new SR(); rec.lang="en-CA"; rec.interimResults=true; rec.continuous=true;
+    const base=$("sayText").value ? $("sayText").value.trim()+" " : "";
+    rec.onresult=e=>{ let t=""; for(let k=0;k<e.results.length;k++) t+=e.results[k][0].transcript; $("sayText").value=base+t; };
+    rec.onend=()=>{ recOn=false; $("sayMic").classList.remove("on"); $("sayMic").textContent="🎤 Tap and tell me what you ate"; if($("sayText").value.trim()) understandSay(); };
+    rec.onerror=e=>{ if(e.error==="not-allowed"||e.error==="service-not-allowed") toast("Microphone is blocked. Use the 🎤 on your keyboard instead."); };
+    rec.start(); recOn=true; $("sayMic").classList.add("on"); $("sayMic").textContent="● Listening… tap when done";
+  }catch(e){ toast("Voice isn't available here. Use the 🎤 on your keyboard."); }
+};
 
 /* ----- barcode ----- */
 let zxing=null;

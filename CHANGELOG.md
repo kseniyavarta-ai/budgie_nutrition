@@ -2,7 +2,8 @@
 
 | Date | Label | What changed | Status |
 |---|---|---|---|
-| 2026-10-22 | sync-fix | Fix: Google Sheets turned date ids (2026-10-19) into dates, so days and weigh-ins loaded under the wrong key and looked empty. App now maps them back; Code.gs keeps ids as text. Sync no longer drops records that never reached the Sheet. | **Live** |
+| 2026-10-22 | say-it | New 🎤 Say mode: talk or type what you ate; Claude splits it into foods, matches your library, picks the meal, and shows a ready-to-save list with a total. Edit grams or pieces, untick anything wrong, tap Save. | **Live** |
+| 2026-10-22 | sync-fix | Fix: Google Sheets turned date ids (2026-10-19) into dates, so days and weigh-ins loaded under the wrong key and looked empty. App now maps them back; Code.gs keeps ids as text. Sync no longer drops records that never reached the Sheet. | Replaced by say-it |
 | 2026-10-22 | goal-and-plan | Body tab: goal you set right on the card, progress bar, weeks to goal, next Monday weigh-in, next milestone and an on-track mark. Settings: "Calculate for me" plan (Mifflin-St Jeor or Katch-McArdle with body fat %, activity, 1.8 g/kg protein, fat floor 0.8 g/kg, fibre 14 g/1,000 kcal; switches to measured maintenance after 3+ weigh-ins). Manual numbers moved under "Adjust by hand". | Replaced by sync-fix |
 | 2026-10-22 | food-groups | Food groups (Protein, Dairy, Vegetables, Fruit, Grains & starches, Legumes, Nuts & seeds, Fats & oils, Pantry, Sweets & treats, Drinks, Recipes): sectioned Foods list, group chips to filter, group picker when editing a food. | Replaced by goal-and-plan |
 | 2026-10-22 | lemon-and-blue | Dedication now reads "In memory of Lemon and Blue". | Replaced by food-groups |
