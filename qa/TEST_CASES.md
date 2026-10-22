@@ -34,6 +34,7 @@ Tests run against a **fake Google Sheet** (an in-memory copy of `apps-script/Cod
 | V4 | Change grams | Change an item's grams → its macros and the total update → saved value matches |
 | V5 | Meal from speech | "for breakfast…" → meal set to Breakfast |
 | V6 | Siri link | Opening `#say=<text>` lands on the review card, not saved until approved |
+| V7 | AI can't run | Missing API key or no credits → a plain message on screen says what to fix (not a disappearing toast) |
 
 ## Photo / barcode
 

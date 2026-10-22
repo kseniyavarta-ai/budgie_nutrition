@@ -136,6 +136,7 @@ textarea{resize:vertical;min-height:60px}
 .pick button:first-child{border-top:0}
 .pick button[aria-pressed="true"]{background:var(--soft)}
 .pick button small{color:var(--muted);font-family:var(--mono);font-size:.76rem;white-space:nowrap}
+#sayNote,#phNoteOut{font-family:var(--body);color:var(--ink)}
 .preview{font:500 .88rem var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 .chk{display:flex;gap:8px;align-items:center;font-size:.9rem;color:var(--ink)}
 .chk input{width:auto}
@@ -529,7 +530,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · safe-save";
+const VERSION = "v2026.10.22 · ai-errors";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -692,6 +693,16 @@ function fileToJpeg(file,max=1280){
 }
 function extractJson(t){ const s=t.indexOf("{"), e=t.lastIndexOf("}"); if(s<0||e<0) throw new Error("No answer"); return JSON.parse(t.slice(s,e+1)); }
 function libraryIndex(){ return Object.values(DB.foods).map(f=>`${f.id} | ${f.name} | ${f.basis==="unit"?"per "+(f.unit||"piece"):"per 100 g"}`).join("\n"); }
+function aiErr(e){
+  const m=String(e&&e.message||e);
+  if(/no_api_key/.test(m)) return "AI isn't set up yet: add ANTHROPIC_API_KEY in your Sheet → Extensions → Apps Script → Project Settings → Script properties.";
+  if(/credit balance|billing/i.test(m)) return "Your Anthropic account is out of credits. Add a few dollars at console.anthropic.com → Billing.";
+  if(/invalid x-api-key|authentication/i.test(m)) return "The Anthropic API key in your Sheet isn't valid. Copy it again from console.anthropic.com → API keys.";
+  if(/model/i.test(m)) return "The AI model name was rejected ("+m+"). Tell Claude this message.";
+  if(/unknown_action/.test(m)) return "Your Sheet script is out of date. Paste the newest Code.gs and deploy a New version.";
+  if(/unreachable|not_public|bad_reply/.test(m)) return "Couldn't reach your Sheet. Check your connection, then try again.";
+  return "Something went wrong: "+m;
+}
 async function askAI(system,prompt,images){
   if(!CONN || !CONN.url) throw new Error("Connect your Google Sheet in Settings to use photo AI.");
   const j=await api("ai",{system,prompt,images:images||[]});
@@ -861,7 +872,7 @@ $("phGo").onclick=async()=>{
       aiItems=(j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
       renderAiItems(); $("phNoteOut").textContent=j.note||""; $("aAdd").scrollIntoView({block:"nearest"});
     }
-  }catch(e){ toast(e.message||"Photo analysis failed"); }
+  }catch(e){ console.warn(e); $("phNoteOut").textContent=aiErr(e); }
   btn.disabled=false; btn.textContent="Analyze again";
 };
 // numbers for one reviewed item: from the library when it matched, otherwise the AI's estimate
@@ -907,8 +918,8 @@ async function understandSay(){
     aiItems=(j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
     if(j.meal && !editing) $("aMeal").value=j.meal;
     $("sayNote").textContent=j.note||""; renderAiItems(); $("aAdd").scrollIntoView({block:"nearest"});
-    if(!aiItems.length) toast("I couldn't find any food in that. Try again?");
-  }catch(e){ toast(e.message||"Couldn't understand that"); }
+    if(!aiItems.length) $("sayNote").textContent="I couldn't find any food in that. Try saying it a bit differently.";
+  }catch(e){ console.warn(e); $("sayNote").textContent=aiErr(e); }
   b.disabled=false; b.textContent="Understand again";
 }
 $("sayGo").onclick=understandSay;
@@ -1082,7 +1093,7 @@ async function aiRecipe(images,text){
     });
     $("rAiStatus").textContent=`Added ${(j.ingredients||[]).length} ingredients. Check the grams, then weigh the cooked batch.`;
     renderRec();
-  }catch(e){ $("rAiStatus").textContent=e.message||"Couldn't read that recipe."; }
+  }catch(e){ $("rAiStatus").textContent=aiErr(e); }
 }
 $("rPhoto").onchange=async e=>{ const files=[...e.target.files].slice(0,4); if(!files.length) return; const imgs=await Promise.all(files.map(f=>fileToJpeg(f,1600))); aiRecipe(imgs,$("rText").value); };
 $("rParse").onclick=()=>{ if(!$("rText").value.trim()){ toast("Paste the ingredients first"); return; } aiRecipe([], $("rText").value); };

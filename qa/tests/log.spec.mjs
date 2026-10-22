@@ -120,6 +120,18 @@ test.describe("Say (voice or typed)", () => {
     await expect(app.locator("#aAdd")).toHaveText("Add 3 to log");
     expect(entries(sheet, todayIso())).toHaveLength(0);
   });
+
+  test("V7 AI problem is explained on screen", async ({ app, sheet }) => {
+    sheet.reject = req => req.action === "ai" ? "no_api_key" : null;
+    await app.click("#fab");
+    await app.click('#modeSeg [data-m="say"]');
+    await app.fill("#sayText", "two eggs");
+    await app.click("#sayGo");
+    await expect(app.locator("#sayNote")).toContainText("ANTHROPIC_API_KEY");
+    sheet.reject = req => req.action === "ai" ? "Your credit balance is too low to access the Anthropic API." : null;
+    await app.click("#sayGo");
+    await expect(app.locator("#sayNote")).toContainText("out of credits");
+  });
 });
 
 test.describe("Photo and barcode", () => {
