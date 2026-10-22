@@ -105,7 +105,7 @@ textarea{resize:vertical;min-height:60px}
 .btn:disabled{opacity:.5;cursor:default}
 .row2{display:flex;gap:10px;flex-wrap:wrap}
 .row2>*{flex:1 1 140px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:.9rem;z-index:40;max-width:90vw;text-align:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:.9rem;z-index:60;max-width:90vw;text-align:center}
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:20}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);border-radius:18px 18px 0 0;max-height:90vh;overflow:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px calc(env(safe-area-inset-bottom,0px) + 18px)}
 .sheet .in{max-width:560px;margin:0 auto;display:grid;gap:12px}
@@ -153,6 +153,7 @@ textarea{resize:vertical;min-height:60px}
     <label>Web app URL<input id="sUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></label>
     <label>Token (your BUDGIE_TOKEN)<input id="sTok" type="password" autocomplete="off"></label>
     <button class="btn" id="sGo">Connect</button>
+    <p class="note" id="sErr" hidden style="color:var(--over)"></p>
     <button class="btn ghost" id="sLocal">Try it without a Sheet</button>
     <p class="note">Without a Sheet, data stays only in this browser and photo AI is off. You can connect later in Settings.</p>
     <div class="ver" id="verSetup"></div>
@@ -407,7 +408,7 @@ textarea{resize:vertical;min-height:60px}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · first-flight";
+const VERSION = "v2026.10.22 · connect-help";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null};
@@ -436,8 +437,11 @@ const saveQ = () => LS.set("budgie-queue",Q);
 async function api(action, payload, conn){
   conn = conn || CONN;
   if(!conn || !conn.url) throw new Error("not_connected");
-  const res = await fetch(conn.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:conn.token,action,...payload})});
-  const j = await res.json();
+  let res;
+  try{ res = await fetch(conn.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:conn.token,action,...payload})}); }
+  catch(e){ throw new Error("unreachable"); }
+  const txt = await res.text(); let j;
+  try{ j = JSON.parse(txt); }catch(e){ throw new Error(/<html|<!doctype/i.test(txt) ? "not_public" : "bad_reply"); }
   if(!j.ok) throw new Error(j.error||"failed");
   return j;
 }
@@ -897,7 +901,7 @@ async function connect(url,token){
   CONN=conn; LS.set("budgie-conn",CONN); await syncDown(); flush();
 }
 $("cSave").onclick=async()=>{ const b=$("cSave"); b.disabled=true; b.innerHTML='<span class="spin"></span>Testing…';
-  try{ await connect($("cUrl").value,$("cTok").value); toast("Connected to your Sheet"); }catch(e){ toast(e.message==="bad_token"?"Token doesn't match the Sheet's BUDGIE_TOKEN":"Couldn't reach the Sheet. Check the URL."); }
+  try{ await connect($("cUrl").value,$("cTok").value.trim()); toast("Connected to your Sheet"); }catch(e){ toast(connErr(e)); }
   b.disabled=false; b.textContent="Save and test"; };
 $("cSync").onclick=()=>{ syncDown(); toast("Syncing…"); };
 $("impFile").onchange=async e=>{
@@ -914,9 +918,19 @@ $("expBtn").onclick=()=>{ const blob=new Blob([JSON.stringify(DB,null,1)],{type:
 
 /* ================= setup ================= */
 function showSetup(){ $("setup").hidden=false; }
+function connErr(e){
+  const m=String(e&&e.message||e);
+  return m==="bad_token" ? "The token doesn't match BUDGIE_TOKEN in the Sheet's Script properties (check for spaces)."
+    : m==="not_public" ? "Google returned a sign-in page. In Apps Script: Deploy → Manage deployments → edit → Who has access: Anyone, then Deploy."
+    : m==="unreachable" ? "Couldn't reach that URL. Copy the Web app URL again; it should end in /exec (not the editor link)."
+    : m==="bad_reply" ? "That URL answered, but not like Budgie's script. Make sure you pasted the Budgie Code.gs and deployed it as a Web app."
+    : "Error: "+m;
+}
 $("sGo").onclick=async()=>{ const b=$("sGo"); b.disabled=true; b.innerHTML='<span class="spin"></span>Connecting…';
-  try{ await connect($("sUrl").value,$("sTok").value); $("setup").hidden=true; $("cUrl").value=CONN.url; $("cTok").value=CONN.token; toast("Connected. Welcome to Budgie!"); }
-  catch(e){ toast(e.message==="bad_token"?"Token doesn't match the Sheet's BUDGIE_TOKEN":"Couldn't reach the Sheet. Check the URL and that it's deployed for Anyone."); }
+  $("sErr").hidden=true;
+  if(!/^https:\/\/script\.google(usercontent)?\.com\//.test($("sUrl").value.trim())){ $("sErr").textContent="Paste the Web app URL from Apps Script (starts with https://script.google.com/macros/s/ and ends in /exec)."; $("sErr").hidden=false; b.disabled=false; b.textContent="Connect"; return; }
+  try{ await connect($("sUrl").value,$("sTok").value.trim()); $("setup").hidden=true; $("cUrl").value=CONN.url; $("cTok").value=CONN.token; toast("Connected. Welcome to Budgie!"); }
+  catch(e){ $("sErr").textContent=connErr(e); $("sErr").hidden=false; }
   b.disabled=false; b.textContent="Connect"; };
 $("sLocal").onclick=()=>{ CONN={local:true}; LS.set("budgie-conn",CONN); $("setup").hidden=true; status(); };
 
