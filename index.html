@@ -510,7 +510,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · goal-and-plan";
+const VERSION = "v2026.10.22 · sync-fix";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -571,8 +571,30 @@ async function syncDown(){
     await flush();
     if(Q.length) return;
     const j = await api("load",{});
-    DB = {foods:{},days:{},body:{},settings:{},...j.data}; saveDB(); renderAll(); status(true);
+    const remote = normalizeRemote(j.data||{});
+    const known = new Set(LS.get("budgie-known",[]));
+    const next = {foods:{},days:{},body:{},settings:{}}, reup=[];
+    ["foods","days","body","settings"].forEach(c=>{
+      Object.assign(next[c], remote[c]);
+      // keep anything on this device the Sheet has never had (e.g. a failed upload) and send it again
+      Object.entries(DB[c]||{}).forEach(([id,data])=>{ if(!(id in next[c]) && !known.has(c+"/"+id)){ next[c][id]=data; reup.push({collection:c,id,data}); } });
+    });
+    DB=next; saveDB();
+    LS.set("budgie-known",["foods","days","body","settings"].flatMap(c=>Object.keys(remote[c]).map(id=>c+"/"+id)));
+    renderAll(); status(true);
+    if(reup.length){ reup.forEach(it=>Q.push({action:"put",...it})); saveQ(); flush(); }
   }catch(e){ console.warn(e); status(); if(String(e.message)==="bad_token") toast("Sheet says the token is wrong. Check Settings."); }
+}
+// Google Sheets can turn ids like "2026-10-19" into dates; put each record back under its real key
+function normalizeRemote(data){
+  const out={foods:{},days:{},body:{},settings:{}};
+  ["foods","days","body","settings"].forEach(c=>Object.entries(data[c]||{}).forEach(([id,v])=>{
+    let key=id;
+    if((c==="days"||c==="body") && v && v.date) key=v.date;
+    else if(c==="foods" && v && v.id) key=v.id;
+    out[c][key]=v;
+  }));
+  return out;
 }
 function status(justSynced){
   const s=$("status");

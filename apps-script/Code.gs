@@ -54,14 +54,20 @@ function sheet_(name) {
     sh.appendRow(['id', 'json', 'updated']);
     sh.setFrozenRows(1);
   }
+  sh.getRange('A:A').setNumberFormat('@'); // keep ids like 2026-10-19 as text, not dates
   return sh;
+}
+
+function key_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return String(v);
 }
 
 function rowIndex_(sh, id) {
   var last = sh.getLastRow();
   if (last < 2) return -1;
   var ids = sh.getRange(2, 1, last - 1, 1).getValues();
-  for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === String(id)) return i + 2;
+  for (var i = 0; i < ids.length; i++) if (key_(ids[i][0]) === String(id)) return i + 2;
   return -1;
 }
 
@@ -95,7 +101,7 @@ function loadAll_() {
     var sh = sheet_(c), last = sh.getLastRow(), rows = {};
     if (last >= 2) {
       sh.getRange(2, 1, last - 1, 2).getValues().forEach(function (v) {
-        try { rows[String(v[0])] = JSON.parse(v[1]); } catch (e) {}
+        try { rows[key_(v[0])] = JSON.parse(v[1]); } catch (e) {}
       });
     }
     out[c] = rows;
