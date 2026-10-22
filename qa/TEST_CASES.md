@@ -33,8 +33,13 @@ Tests run against a **fake Google Sheet** (an in-memory copy of `apps-script/Cod
 | V3 | Untick skips | Untick one item → only the ticked ones are saved |
 | V4 | Change grams | Change an item's grams → its macros and the total update → saved value matches |
 | V5 | Meal from speech | "for breakfast…" → meal set to Breakfast |
+| V7 | Dictate, tap Done | Keyboard 🎤 dictation, then Done → review card appears by itself, Add is active |
+| V8 | Add before review | Text typed, Add tapped → reads it and shows the review, doesn't save yet |
+| V9 | Review takes over | Review replaces the text box; "Change what I said" brings it back with the text |
+| V10 | AI problem shown | Missing API key etc. → reason shown on screen |
+| V11 | Big mic button | Tap mic, talk, tap again → review card |
 | V6 | Siri link | Opening `#say=<text>` lands on the review card, not saved until approved |
-| V7 | AI can't run | Missing API key or no credits → a plain message on screen says what to fix (not a disappearing toast) |
+| V12 | AI can't run | Missing API key or no credits → a plain message on screen says what to fix (not a disappearing toast) |
 
 ## Photo / barcode
 

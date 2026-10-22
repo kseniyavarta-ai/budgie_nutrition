@@ -114,6 +114,60 @@ test.describe("Say (voice or typed)", () => {
     await expect(app.locator("#aMeal")).toHaveValue("breakfast");
   });
 
+  test("V7 keyboard dictation then Done shows the review card by itself", async ({ app, sheet }) => {
+    await openAdd(app);
+    await app.click('#modeSeg [data-m="say"]');
+    await app.locator("#sayText").fill("150 grams greek yogurt, blueberries and two eggs"); // keyboard 🎤 dictation
+    await app.locator("#sayText").blur();                                                  // tap Done
+    await expect(app.locator("#sayOut .ai-item[data-item]")).toHaveCount(3);
+    await expect(app.locator("#aAdd")).toBeEnabled();
+    await expect(app.locator("#aAdd")).toHaveText("Add 3 to log");
+    expect(entries(sheet, todayIso())).toHaveLength(0);
+  });
+
+  test("V8 Add button works with words typed but not reviewed yet", async ({ app }) => {
+    await openAdd(app);
+    await app.click('#modeSeg [data-m="say"]');
+    await app.locator("#sayText").fill("two eggs and yogurt");
+    await expect(app.locator("#aAdd")).toBeEnabled();
+    await app.click("#aAdd");
+    await expect(app.locator("#sayOut .ai-item[data-item]")).toHaveCount(3);
+    await expect(app.locator("#addSheet")).toBeVisible(); // still waiting for approval
+  });
+
+  test("V9 review takes over the screen, with a way back to edit", async ({ app }) => {
+    await say(app);
+    await expect(app.locator("#sayText")).toBeHidden();
+    await expect(app.locator("#sayEdit")).toBeVisible();
+    await app.click("#sayEdit");
+    await expect(app.locator("#sayText")).toBeVisible();
+    await expect(app.locator("#sayText")).toHaveValue(/greek yogurt/);
+  });
+
+  test("V10 if the AI can't answer, the reason is shown, not hidden", async ({ app, sheet }) => {
+    sheet.reject = req => req.action === "ai" ? "no_api_key" : null;
+    await openAdd(app);
+    await app.click('#modeSeg [data-m="say"]');
+    await app.locator("#sayText").fill("two eggs");
+    await app.click("#sayGo");
+    await expect(app.locator("#sayNote")).toContainText(/ANTHROPIC_API_KEY/);
+  });
+
+  test("V11 big mic button: talk, tap again → review card", async ({ app }) => {
+    await app.addInitScript(() => {
+      window.webkitSpeechRecognition = class { start(){ setTimeout(()=>this.onresult({ results: [[{ transcript: "two eggs and yogurt" }]] }), 50); }
+        stop(){ setTimeout(()=>this.onend(), 50); } };
+      window.SpeechRecognition = window.webkitSpeechRecognition; // newer Chromium has its own unprefixed one
+    });
+    await app.reload(); await expect(app.locator("#status")).toHaveText(/Synced|Saved/);
+    await openAdd(app);
+    await app.click('#modeSeg [data-m="say"]');
+    await app.click("#sayMic");
+    await expect(app.locator("#sayText")).toHaveValue("two eggs and yogurt");
+    await app.click("#sayMic"); // tap when done
+    await expect(app.locator("#sayOut .ai-item[data-item]")).toHaveCount(3);
+  });
+
   test("V6 Siri link opens the review card without saving", async ({ app, sheet }) => {
     await app.goto(app.url().split("#")[0] + "#say=two%20eggs%20and%20yogurt");
     await expect(app.locator("#sayOut .ai-item[data-item]")).toHaveCount(3);
@@ -121,7 +175,7 @@ test.describe("Say (voice or typed)", () => {
     expect(entries(sheet, todayIso())).toHaveLength(0);
   });
 
-  test("V7 AI problem is explained on screen", async ({ app, sheet }) => {
+  test("V12 AI problem (no key, no credits) is explained on screen", async ({ app, sheet }) => {
     sheet.reject = req => req.action === "ai" ? "no_api_key" : null;
     await app.click("#fab");
     await app.click('#modeSeg [data-m="say"]');

@@ -145,6 +145,7 @@ textarea{resize:vertical;min-height:60px}
 @keyframes pulse{50%{opacity:.75}}
 .ai-item{display:grid;grid-template-columns:auto minmax(0,1fr) 84px;gap:8px;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
 .ai-item:first-child{border-top:0}
+#aAdd{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:2;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 .ai-item input[type=checkbox]{width:auto}
 .ai-item small{display:block;color:var(--muted);font-size:.78rem}
 .ai-item .mac{color:var(--ink);font-variant-numeric:tabular-nums;font-size:.8rem;margin-top:2px}
@@ -433,10 +434,13 @@ details summary{list-style:none}
     </div>
 
     <div id="m-say" hidden style="display:grid;gap:10px">
+      <div id="sayIn" style="display:grid;gap:10px">
       <button class="btn mic" id="sayMic" type="button" hidden>🎤 Tap and tell me what you ate</button>
       <label><span id="sayLbl">What did you eat?</span><textarea id="sayText" rows="3" placeholder="e.g. two eggs, 50 grams of avocado and one cottage cheese bagel, about 85 grams"></textarea></label>
       <p class="note" id="sayTip">Tip: tap the 🎤 on your keyboard and just talk. Say amounts when you know them; I'll estimate the rest.</p>
       <button class="btn ghost" id="sayGo">Understand it</button>
+      </div>
+      <button class="btn ghost" id="sayEdit" type="button" hidden>✎ Change what I said</button>
       <div class="list" id="sayOut" hidden></div>
       <div class="preview" id="sayNote"></div>
     </div>
@@ -530,7 +534,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · ai-errors";
+const VERSION = "v2026.10.22 · say-review";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -774,7 +778,7 @@ function openAdd(entry){
   ["aSearch","aAmt","qName","qK","qP","qC","qF","qFb","phNote","bcNum","bcAmt"].forEach(i=>$(i).value="");
   $("phLabel").checked=false; $("phOut").hidden=true; $("phOut").innerHTML=""; $("phNoteOut").textContent=""; $("phCount").textContent="No photos yet"; $("phGo").disabled=true;
   $("bcOut").textContent=""; $("bcAmtWrap").hidden=true;
-  $("sayText").value=""; $("sayOut").hidden=true; $("sayOut").innerHTML=""; $("sayNote").textContent=""; $("sayGo").textContent="Understand it";
+  $("sayText").value=""; $("sayOut").hidden=true; $("sayOut").innerHTML=""; $("sayNote").textContent=""; $("sayGo").textContent="Understand it"; sayShowInput(); lastSaid="";
   $("addTitle").textContent = editing?"Edit entry":"Add food";
   $("aAdd").textContent = editing?"Save changes":"Add to log";
   $("aDel").hidden=!editing;
@@ -817,12 +821,14 @@ function updAdd(){
     if(picked && a>0){ const v=calc(picked,a); $("aPrev").textContent=`${fmt(v.kcal)} kcal · ${v.p} P · ${v.c} C · ${v.f} F · ${v.fb} fibre`; ok=true; }
     else $("aPrev").textContent = picked?"Enter an amount":"Pick a food";
   } else if(MODE==="quick"){ ok = !!$("qName").value.trim() && $("qK").value!==""; }
-  else if(MODE==="photo"||MODE==="say"){ ok = aiItems.some(i=>i.on); }
+  else if(MODE==="say"){ ok = aiItems.some(i=>i.on) || (!aiItems.length && !!$("sayText").value.trim()); }
+  else if(MODE==="photo"){ ok = aiItems.some(i=>i.on); }
   else if(MODE==="barcode"){ ok = !!bcFood && parseFloat($("bcAmt").value)>0; }
   $("aAdd").disabled=!ok;
-  $("aAdd").textContent = editing?"Save changes":((MODE==="photo"||MODE==="say")&&aiItems.length? "Add "+aiItems.filter(i=>i.on).length+" to log" : "Add to log");
+  $("aAdd").textContent = editing?"Save changes":((MODE==="photo"||MODE==="say")&&aiItems.length? "Add "+aiItems.filter(i=>i.on).length+" to log" : MODE==="say"&&$("sayText").value.trim() ? "Check what I said" : "Add to log");
 }
 $("aAdd").onclick=()=>{
+  if(MODE==="say" && !aiItems.length){ understandSay(); return; }
   const meal=$("aMeal").value, cur=dayEntries();
   let add=[];
   if(MODE==="lib"){
@@ -910,18 +916,33 @@ Match each food to the user's library when it is clearly the same food (library 
 For every item also give kcal, protein p, carbs c, fat f and fibre fb in grams FOR THAT PORTION.
 If the person says which meal it was (breakfast, lunch, dinner, dessert, snack), return it as "meal" (breakfast|lunch|dinner|dessert|other), otherwise null.
 Return ONLY JSON: {"meal":null,"items":[{"name":"","grams":0,"pieces":null,"libraryId":null,"kcal":0,"p":0,"c":0,"f":0,"fb":0}],"note":"one short sentence about anything you assumed"}`;
-async function understandSay(){
-  const text=$("sayText").value.trim(); if(!text){ toast("Tell me what you ate first"); return; }
+let lastSaid="", sayBusy=null;
+function sayShowInput(){ $("sayIn").hidden=false; $("sayIn").style.display="grid"; $("sayEdit").hidden=true; }
+function sayShowReview(){ $("sayIn").hidden=true; $("sayIn").style.display="none"; $("sayEdit").hidden=false; $("addSheet").querySelector(".in").scrollTop=0; }
+function understandSay(){
+  const text=$("sayText").value.trim(); if(!text){ toast("Tell me what you ate first"); return Promise.resolve(); }
+  if(sayBusy) return sayBusy;
+  if(text===lastSaid && aiItems.length){ sayShowReview(); return Promise.resolve(); }
   const b=$("sayGo"); b.disabled=true; b.innerHTML='<span class="spin"></span>Understanding…';
-  try{
-    const j=await askAI(SAY_SYS,"User's library:\n"+libraryIndex()+"\n\nWhat they said:\n"+text,[]);
-    aiItems=(j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
-    if(j.meal && !editing) $("aMeal").value=j.meal;
-    $("sayNote").textContent=j.note||""; renderAiItems(); $("aAdd").scrollIntoView({block:"nearest"});
-    if(!aiItems.length) $("sayNote").textContent="I couldn't find any food in that. Try saying it a bit differently.";
-  }catch(e){ console.warn(e); $("sayNote").textContent=aiErr(e); }
-  b.disabled=false; b.textContent="Understand again";
+  $("aAdd").disabled=true; $("aAdd").innerHTML='<span class="spin"></span>Reading what you said…';
+  $("sayNote").textContent="";
+  sayBusy=(async()=>{
+    try{
+      const j=await askAI(SAY_SYS,"User's library:\n"+libraryIndex()+"\n\nWhat they said:\n"+text,[]);
+      if(MODE!=="say") return;
+      aiItems=(j.items||[]).map(i=>fixPieces({...i,grams:Math.round(+i.grams||0),pieces:i.pieces!=null?+i.pieces:null,on:true}));
+      if(j.meal && !editing) $("aMeal").value=j.meal;
+      lastSaid=text; $("sayNote").textContent=j.note||""; renderAiItems();
+      if(aiItems.length) sayShowReview(); else { $("sayNote").textContent="I couldn't find any food in that. Try saying it again with amounts."; }
+    }catch(e){ console.warn(e); $("sayNote").textContent=aiErr(e); }
+    finally{ sayBusy=null; b.disabled=false; b.textContent="Understand again"; updAdd(); }
+  })();
+  return sayBusy;
 }
+// keyboard dictation: when you tap Done (or stop talking for a few seconds), read it automatically
+$("sayText").addEventListener("blur",()=>{ const t=$("sayText").value.trim(); if(MODE==="say" && t && t!==lastSaid && !$("addSheet").hidden) understandSay(); });
+$("sayText").addEventListener("input",()=>{ if(aiItems.length && $("sayText").value.trim()!==lastSaid){ aiItems=[]; renderAiItems(); } updAdd(); clearTimeout(understandSay._t); understandSay._t=setTimeout(()=>{ const t=$("sayText").value.trim(); if(MODE==="say" && t && t!==lastSaid && !recOn && !$("addSheet").hidden) understandSay(); },3500); });
+$("sayEdit").onclick=()=>{ sayShowInput(); $("sayText").focus(); };
 $("sayGo").onclick=understandSay;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 var rec=null, recOn=false;
