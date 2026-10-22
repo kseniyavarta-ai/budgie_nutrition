@@ -30,6 +30,7 @@ A calm food tracker built by a nutritionist, for herself first: food log, a pers
 - **Recipes:** fill ingredients from a photo or pasted text, then weigh the cooked batch (save your pots' empty weights once). Logged per 100 g cooked.
 - **Body:** weekly weigh-ins, tape measurements, progress to goal, 7-day food averages.
 - **Backup:** import / export as JSON.
+- **Hey Siri, Budgie:** a Shortcut that dictates what you ate and opens `…/budgie_nutrition/#say=<text>`; Budgie pre-fills the entries for you to approve.
 
 ## File naming (same as Flerken)
 

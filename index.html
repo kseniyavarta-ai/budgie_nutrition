@@ -525,7 +525,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · say-it-2";
+const VERSION = "v2026.10.22 · hey-siri";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -1266,6 +1266,16 @@ setTab(LS.get("budgie-tab","today"));
 renderAll(); status();
 if(!CONN) showSetup(); else syncDown();
 checkUpdate();
+/* deep link for Siri Shortcuts: #say opens voice logging, #say=<text> fills it in */
+function handleHash(){
+  const h=location.hash; if(!h.startsWith("#say")) return;
+  const text=h.startsWith("#say=") ? decodeURIComponent(h.slice(5).replace(/\+/g," ")) : "";
+  history.replaceState(null,"",location.pathname);
+  if(!CONN) return;
+  setTab("today"); openAdd(); setMode("say");
+  if(text){ $("sayText").value=text; understandSay(); } else setTimeout(()=>$("sayText").focus(),150);
+}
+window.addEventListener("hashchange",handleHash); handleHash();
 })();
 </script>
 </body>
