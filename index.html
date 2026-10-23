@@ -514,11 +514,11 @@ details summary{list-style:none}
     <h3><span id="recTitle">New recipe</span><button class="x" data-close aria-label="Close">×</button></h3>
     <label>Recipe name<input id="rName" placeholder="Lentil & chicken stew"></label>
     <div class="row2">
-      <label class="btn ghost" for="rPhoto" style="display:block">Fill from a photo<input type="file" id="rPhoto" accept="image/*" multiple hidden></label>
+      <button class="btn ghost" id="rPhotoBtn" type="button">From a photo</button><input type="file" id="rPhoto" accept="image/*" multiple hidden>
     </div>
     <label>Or paste the ingredient list<textarea id="rText" placeholder="300 g dry green lentils&#10;700 g boneless chicken thighs&#10;2 onions…"></textarea></label>
     <button class="btn ghost" id="rParse">Read ingredients</button>
-    <div class="preview" id="rAiStatus"></div>
+    <div class="alert" id="rAiStatus" hidden></div>
     <h3 style="font-size:1rem">Ingredients</h3>
     <div class="list" id="rIngs"></div>
     <input type="search" id="rSearch" placeholder="Add an ingredient from your library" aria-label="Add ingredient">
@@ -542,7 +542,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.22 · say-free";
+const VERSION = "v2026.10.23 · recipes-free";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -859,6 +859,7 @@ $("aAdd").onclick=()=>{
   } else if(MODE==="photo"||MODE==="say"){
     const src = MODE==="say" ? "said" : "from photo";
     add=aiItems.filter(i=>i.on).map(i=>{
+      if(i.libraryId) ensureInLibrary(i.libraryId);
       const f=i.libraryId&&DB.foods[i.libraryId];
       if(f && f.basis==="unit" && i.pieces>0) return {id:uid(),meal,foodId:f.id,name:f.name,amount:i.pieces,amountLabel:i.pieces+" × "+(f.unit||"piece")+" · "+src,...calc(f,i.pieces)};
       if(f && f.basis!=="unit" && i.grams>0) return {id:uid(),meal,foodId:f.id,name:f.name,amount:i.grams,amountLabel:i.grams+" g · "+src,...calc(f,i.grams)};
@@ -901,12 +902,12 @@ $("phGo").onclick=async()=>{
   btn.disabled=false; btn.textContent="Analyze again";
 };
 // numbers for one reviewed item: from the library when it matched, otherwise the AI's estimate
-function aiItemVals(i){ const f=i.libraryId&&DB.foods[i.libraryId];
+function aiItemVals(i){ const f=i.libraryId&&foodById(i.libraryId);
   if(f&&f.basis==="unit"&&i.pieces>0) return calc(f,i.pieces);
   if(f&&f.basis!=="unit"&&i.grams>0) return calc(f,i.grams);
   const o={}; NUT.forEach(k=>o[k]=r1(i[k])); return o; }
 // AI sometimes gives grams for a food you count in pieces: turn it into pieces when we know the piece weight
-function fixPieces(i){ const f=i.libraryId&&DB.foods[i.libraryId];
+function fixPieces(i){ const f=i.libraryId&&foodById(i.libraryId);
   if(f&&f.basis==="unit"&&!(i.pieces>0)) i.pieces = f.pieceG&&i.grams>0 ? Math.max(1,Math.round(i.grams/f.pieceG*2)/2) : 1;
   return i; }
 const macLine = v => `${fmt(v.kcal)} kcal · P ${r1(v.p)} · C ${r1(v.c)} · F ${r1(v.f)} · fibre ${r1(v.fb)}`;
@@ -915,25 +916,78 @@ function renderAiItems(){
   const on=aiItems.filter(i=>i.on), tot=totals(on.map(aiItemVals));
   out.innerHTML = aiItems.length
     ? `<div class="ai-head">Check it, then tap Add. Nothing is in your log yet.</div>`
-      + aiItems.map((i,n)=>{ const v=aiItemVals(i), f=i.libraryId&&DB.foods[i.libraryId], unit=f&&f.basis==="unit";
+      + aiItems.map((i,n)=>{ const v=aiItemVals(i), f=i.libraryId&&foodById(i.libraryId), unit=f&&f.basis==="unit";
         const chooser = (i.unmatched||i.close) ? `<select class="pickfood" data-pick="${n}" aria-label="Choose the food for ${esc(i.said||i.name)}"><option value="">${i.unmatched?"Pick the food you meant…":"Not right? Pick another…"}</option>${candidatesFor(i.said||i.name).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}<option disabled>──────────</option>${foodsSorted("").map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select>` : "";
         if(i.unmatched) return `<div class="ai-item off" data-item="${n}"><input type="checkbox" data-n="${n}" disabled aria-label="Not in your library"><div><b>“${esc(i.said||i.name)}”</b><small>Not in your library yet. Pick it below, or add it later in Foods.</small>${chooser}</div><span></span></div>`;
-        return `<div class="ai-item${i.on?"":" off"}" data-item="${n}"><input type="checkbox" data-n="${n}" ${i.on?"checked":""} aria-label="Include ${esc(f?f.name:i.name)}"><div><b>${esc(f?f.name:i.name)}</b><small class="mac">${macLine(v)}</small><small>${f?(i.close?"closest match for “"+esc(i.said)+"”":"from your library"):"estimated"}${unit&&f.pieceG?" · "+fmt(i.pieces*f.pieceG)+" g":""}</small>${chooser}</div><label style="font-size:.72rem">${unit?(f.unit||"pieces"):"grams"}<input type="text" data-g="${n}" value="${unit?(i.pieces||""):(i.grams||"")}" inputmode="decimal" aria-label="${unit?"How many":"Grams"} of ${esc(f?f.name:i.name)}"></label></div>`;}).join("")
+        return `<div class="ai-item${i.on?"":" off"}" data-item="${n}"><input type="checkbox" data-n="${n}" ${i.on?"checked":""} aria-label="Include ${esc(f?f.name:i.name)}"><div><b>${esc(f?f.name:i.name)}</b><small class="mac">${macLine(v)}</small><small>${f?(i.close?"closest match for “"+esc(i.said)+"”":f.builtin&&!DB.foods[f.id]?"built-in value · joins your library when you add it":"from your library"):"estimated"}${unit&&f.pieceG?" · "+fmt(i.pieces*f.pieceG)+" g":""}</small>${chooser}</div><label style="font-size:.72rem">${unit?(f.unit||"pieces"):"grams"}<input type="text" data-g="${n}" value="${unit?(i.pieces||""):(i.grams||"")}" inputmode="decimal" aria-label="${unit?"How many":"Grams"} of ${esc(f?f.name:i.name)}"></label></div>`;}).join("")
       + `<div class="ai-total"><b>Total: ${macLine(tot)}</b></div>`
     : (MODE==="say"?"":`<div class="empty">I couldn't spot any food. Try another photo or add a note.</div>`);
   out.hidden = !out.innerHTML;
   out.querySelectorAll("[data-n]").forEach(c=>c.onchange=()=>{ aiItems[c.dataset.n].on=c.checked; renderAiItems(); });
   out.querySelectorAll("[data-pick]").forEach(sel=>sel.onchange=()=>{ if(!sel.value) return; pickFoodFor(aiItems[sel.dataset.pick],sel.value); renderAiItems(); });
-  out.querySelectorAll("[data-g]").forEach(inp=>inp.onchange=()=>{ const i=aiItems[inp.dataset.g], g=parseFloat(String(inp.value).replace(",","."))||0, f=i.libraryId&&DB.foods[i.libraryId];
+  out.querySelectorAll("[data-g]").forEach(inp=>inp.onchange=()=>{ const i=aiItems[inp.dataset.g], g=parseFloat(String(inp.value).replace(",","."))||0, f=i.libraryId&&foodById(i.libraryId);
     if(f&&f.basis==="unit"){ i.pieces=g; }
     else { if(!f && i.grams>0){ const s=g/i.grams; NUT.forEach(k=>i[k]=(+i[k]||0)*s); } i.grams=g; }
     renderAiItems(); });
   updAdd();
 }
 
-/* ----- Budgie's own reader for "Say" (no AI): numbers, units, your library ----- */
+/* ----- built-in reference foods (standard USDA values per 100 g). Used when your library
+   doesn't have a food; the first time you save one, it's copied into your library. ----- */
+const BUILTIN = [
+ ["chicken-liver","Chicken liver (raw)","Protein",119,16.9,0.7,4.8,0],["beef-liver","Beef liver (raw)","Protein",135,20.4,3.9,3.6,0],
+ ["chicken-breast","Chicken breast, skinless (raw)","Protein",120,22.5,0,2.6,0],["ground-chicken","Ground chicken (raw)","Protein",143,17.4,0,8.1,0],
+ ["ground-pork","Ground pork (raw)","Protein",263,16.9,0,21.2,0],["ground-turkey","Ground turkey 93% lean (raw)","Protein",150,18.7,0,8.3,0],
+ ["turkey-breast","Turkey breast (raw)","Protein",114,23.7,0.1,1.5,0],["ham","Ham, sliced","Protein",107,16.8,2.3,3.7,0],
+ ["bacon","Bacon (raw)","Protein",417,13,1.4,39.7,0],["egg","Egg, large","Protein",143,12.6,0.7,9.5,0,50],
+ ["salmon","Salmon (raw)","Protein",208,20.4,0,13.4,0],["shrimp","Shrimp (raw)","Protein",85,20.1,0,0.5,0],
+ ["tofu","Tofu, firm","Protein",144,17.3,2.8,8.7,2.3],
+ ["butter","Butter","Fats & oils",717,0.9,0.1,81,0],["olive-oil","Olive oil","Fats & oils",884,0,0,100,0],
+ ["coconut-oil","Coconut oil","Fats & oils",892,0,0,99,0],["sesame-oil","Sesame oil","Fats & oils",884,0,0,100,0],
+ ["mayonnaise","Mayonnaise","Fats & oils",680,1,0.6,75,0],
+ ["milk","Milk 2%","Dairy",50,3.3,4.8,2,0],["cream","Whipping cream 35%","Dairy",340,2.1,2.8,36,0],
+ ["sour-cream","Sour cream","Dairy",198,2.4,4.6,19.4,0],["cream-cheese","Cream cheese","Dairy",342,6.2,5.5,34,0],
+ ["ricotta","Ricotta","Dairy",174,11.3,3,13,0],["goat-cheese","Goat cheese, soft","Dairy",264,18.5,0.9,21.1,0],
+ ["cheddar","Cheddar","Dairy",403,23,3.1,33,0],["parmesan","Parmesan","Dairy",392,36,3.2,26,0],
+ ["kefir","Kefir, plain","Dairy",41,3.8,4.5,1,0],["almond-milk","Almond milk, unsweetened","Drinks",15,0.6,0.3,1.2,0.2],
+ ["oat-milk","Oat milk","Drinks",48,1,5.1,2.8,0.8],["soy-milk","Soy milk","Drinks",54,3.3,6.3,1.8,0.6],
+ ["onion","Onion (raw)","Vegetables",40,1.1,9.3,0.1,1.7],["garlic","Garlic (raw)","Vegetables",149,6.4,33,0.5,2.1],
+ ["carrot","Carrot (raw)","Vegetables",41,0.9,9.6,0.2,2.8],["celery","Celery (raw)","Vegetables",14,0.7,3,0.2,1.6],
+ ["tomato","Tomato","Vegetables",18,0.9,3.9,0.2,1.2],["tomato-paste","Tomato paste","Vegetables",82,4.3,18.9,0.5,4.1],
+ ["potato","Potato (raw)","Grains & starches",77,2,17.5,0.1,2.1],["mixed-veg","Mixed vegetables, frozen","Vegetables",64,3.3,13.5,0.5,4.4],
+ ["pumpkin-puree","Pumpkin purée, canned","Vegetables",34,1.1,8.1,0.3,2.9],["ginger","Ginger, fresh","Vegetables",80,1.8,17.8,0.8,2],
+ ["apple","Apple","Fruit",52,0.3,13.8,0.2,2.4],["banana","Banana","Fruit",89,1.1,22.8,0.3,2.6],
+ ["lemon","Lemon","Fruit",29,1.1,9.3,0.3,2.8],["lime","Lime","Fruit",30,0.7,10.5,0.2,2.8],
+ ["raisins","Raisins","Fruit",299,3.1,79,0.5,3.7],["dried-cranberries","Dried cranberries","Fruit",308,0.2,82.4,1.1,5.3],
+ ["avocado","Avocado","Fruit",160,2,8.5,14.7,6.7],
+ ["whole-wheat-bread","Whole wheat bread","Grains & starches",252,12.5,42.7,3.5,6],["white-bread","White bread","Grains & starches",266,7.6,50.6,3.3,2.4],
+ ["flour","All-purpose flour","Grains & starches",364,10.3,76.3,1,2.7],["almond-flour","Almond flour","Grains & starches",571,21,21,50,11],
+ ["rice-flour","Rice flour","Grains & starches",366,6,80,1.4,2.4],["cornstarch","Cornstarch","Pantry",381,0.3,91,0.1,0.9],
+ ["white-rice","White rice (cooked)","Grains & starches",130,2.7,28,0.3,0.4],
+ ["coconut-milk","Coconut milk, canned","Pantry",230,2.3,5.5,23.8,2.2],
+ ["sesame-seeds","Sesame seeds","Nuts & seeds",573,17.7,23.5,49.7,11.8],["sunflower-seeds","Sunflower seeds","Nuts & seeds",584,20.8,20,51.5,8.6],
+ ["cashews","Cashews","Nuts & seeds",553,18.2,30.2,43.9,3.3],["pecans","Pecans","Nuts & seeds",691,9.2,13.9,72,9.6],
+ ["hazelnuts","Hazelnuts","Nuts & seeds",628,15,16.7,60.8,9.7],
+ ["sugar","Sugar","Sweets & treats",387,0,100,0,0],["brown-sugar","Brown sugar","Sweets & treats",380,0.1,98,0,0],
+ ["cocoa","Cocoa powder","Pantry",228,19.6,57.9,13.7,37],["vanilla","Vanilla extract","Pantry",288,0,12.7,0.1,0],
+ ["vinegar","Vinegar","Pantry",18,0,0.04,0,0],["mustard","Mustard","Pantry",60,3.7,5.3,3.3,4],
+ ["ketchup","Ketchup","Pantry",101,1,27,0.1,0.3],["soy-sauce","Soy sauce","Pantry",53,8.1,4.9,0.6,0.8],
+ ["salt","Salt","Herbs & spices",0,0,0,0,0],["black-pepper","Black pepper","Herbs & spices",251,10.4,64,3.3,25.3],
+ ["paprika","Paprika","Herbs & spices",282,14.1,54,12.9,34.9],["cumin","Cumin","Herbs & spices",375,17.8,44.2,22.3,10.5],
+ ["cinnamon","Cinnamon","Herbs & spices",247,4,81,1.2,53],["turmeric","Turmeric","Herbs & spices",312,9.7,67,3.3,22.7],
+ ["nutmeg","Nutmeg","Herbs & spices",525,5.8,49.3,36.3,20.8],["oregano","Oregano, dried","Herbs & spices",265,9,69,4.3,42.5],
+ ["bay-leaf","Bay leaf","Herbs & spices",313,7.6,75,8.4,26.3,0.2],["thyme","Thyme, fresh","Herbs & spices",101,5.6,24.5,1.7,14,0.5],
+ ["rosemary","Rosemary, fresh","Herbs & spices",131,3.3,20.7,5.9,14.1,1],["basil","Basil, fresh","Herbs & spices",23,3.2,2.7,0.6,1.6,0.5],
+ ["parsley","Parsley, fresh","Herbs & spices",36,3,6.3,0.8,3.3,1],["dill","Dill, fresh","Herbs & spices",43,3.5,7,1.1,2.1,1],
+ ["cilantro","Cilantro, fresh","Herbs & spices",23,2.1,3.7,0.5,2.8,1],
+].map(([id,name,group,kcal,p,c,f,fb,pieceG])=>({id:"ref-"+id,name,group,basis:"100g",unit:"",kcal,p,c,f,fb,builtin:true,note:"Built-in USDA value",...(pieceG?{pieceG}:{})}));
+const BUILTIN_BY_ID=Object.fromEntries(BUILTIN.map(f=>[f.id,f]));
+const foodById = id => DB.foods[id] || BUILTIN_BY_ID[id] || null;
+function ensureInLibrary(id){ if(!DB.foods[id] && BUILTIN_BY_ID[id]){ const {builtin,_tok,...f}=BUILTIN_BY_ID[id]; put("foods",id,f); } }
+
+/* ----- Budgie's own reader for "Say" and recipes (no AI): numbers, units, your library ----- */
 const NUMW={zero:0,a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90,couple:2,few:3,dozen:12};
-const UNIT_RE=/^(g|gr|grams?|gs|kg|kilos?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|oz|ounces?|cups?|tbsp|tbs|tablespoons?|tsp|teaspoons?|slices?|pieces?|pcs|handfuls?|bowls?|scoops?|servings?|portions?|cans?|glass(?:es)?|spoons?|pumps?|squares?|wedges?|fillets?|cloves?)$/;
+const UNIT_RE=/^(g|gr|gm|gms|grams?|gs|kg|kilos?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|oz|ounces?|cups?|tbsp|tbs|tablespoons?|tsp|teaspoons?|slices?|pieces?|pcs|handfuls?|bowls?|scoops?|servings?|portions?|cans?|glass(?:es)?|spoons?|pumps?|squares?|wedges?|fillets?|cloves?|stalks?|sprigs?|leaf|leaves|bunch(?:es)?|heads?|knobs?)$/;
 const FILLER=new Set("i i've ive i'm im just had have has ate eaten eat eating some of about around approximately roughly like maybe little bit also my the it on top for got then so um uh okay ok and or with plus today this morning tonight yesterday".split(" "));
 const NAME_SKIP=new Set("raw cooked weight weighed by per with the and of label estimate check recipe medium large small batch plain fresh homemade baked boiled skin on skinless boneless bone only no".split(" "));
 const SYN={toast:"bread",toasts:"bread",yoghurt:"yogurt",yogourt:"yogurt",yoghurts:"yogurt",avo:"avocado",avocados:"avocado",evoo:"olive",oatmeal:"oats",porridge:"oats",mince:"ground",minced:"ground",tomatoes:"tomato",potatoes:"potato",berries:"berry",cukes:"cucumber",capsicum:"pepper",courgette:"zucchini",aubergine:"eggplant",pb:"peanut",choc:"chocolate",steelhead:"salmon",lox:"salmon",cottage:"cottage",bagels:"bagel",prune:"prunes",chickpea:"chickpeas"};
@@ -966,14 +1020,9 @@ function wordsToNumbers(t){
 const sayKey=p=>String(p).toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
 const sayMap=()=>(DB.settings.saymap&&DB.settings.saymap.map)||{};
 const unitMatches=(f,unit)=>!!unit&&!!f.unit&&(sing(f.unit)===sing(unit)||({tablespoon:"tbsp",tbs:"tbsp",teaspoon:"tsp"})[sing(unit)]===f.unit);
-function matchFood(phrase,unit){
-  const remembered=sayMap()[sayKey(phrase)]; if(remembered&&DB.foods[remembered]) return {f:DB.foods[remembered],full:true};
-  const raw=phrase.split(/\s+/).filter(Boolean), neg=[]; const kept=[];
-  for(let k=0;k<raw.length;k++){ if((raw[k]==="no"||raw[k]==="without")&&raw[k+1]){ neg.push(sing(raw[k+1])); k++; continue; } kept.push(raw[k]); }
-  const q=kept.filter(w=>!FILLER.has(w)&&!NAME_SKIP.has(w)&&w!=="a"&&w!=="an").map(sing); if(!q.length) return null;
-  const head=q[q.length-1], rec=new Set(recentFoods(30).map(f=>f.id));
+function scoreFoods(list,q,head,neg,unit,rec){
   let best=null, bestS=0;
-  Object.values(DB.foods).forEach(f=>{
+  list.forEach(f=>{
     const ft=nameTokens(f); if(!ft.length) return;
     const has=w=>ft.some(t=>t===w||(w.length>=4&&(t.startsWith(w)||w.startsWith(t))&&Math.min(t.length,w.length)>=4));
     const hits=q.filter(has).length; if(!hits) return;
@@ -983,9 +1032,27 @@ function matchFood(phrase,unit){
     if(ft[0]===q[0]) s+=0.3; if(f.fav) s+=0.3; if(rec.has(f.id)) s+=0.6; if(unitMatches(f,unit)) s+=1;
     const lname=String(f.name).toLowerCase();
     neg.forEach(x=>{ if(new RegExp("(no|without) "+x).test(lname)) s+=1.5; else if(ft.includes(x)) s-=2; });
-    if(s>bestS){ bestS=s; best={f,full:hits===q.length&&headHit}; }
+    if(s>bestS){ bestS=s; best={f,full:hits===q.length&&headHit,s}; }
   });
   return best;
+}
+function matchFood(phrase,unit){
+  const remembered=sayMap()[sayKey(phrase)]; if(remembered&&foodById(remembered)) return {f:foodById(remembered),full:true};
+  const raw=phrase.split(/\s+/).filter(Boolean), neg=[]; const kept=[];
+  for(let k=0;k<raw.length;k++){ if((raw[k]==="no"||raw[k]==="without")&&raw[k+1]){ neg.push(sing(raw[k+1])); k++; continue; } kept.push(raw[k]); }
+  const q=kept.filter(w=>!FILLER.has(w)&&!NAME_SKIP.has(w)&&w!=="a"&&w!=="an").map(sing); if(!q.length) return null;
+  const head=q[q.length-1], rec=new Set(recentFoods(30).map(f=>f.id));
+  const lib=scoreFoods(Object.values(DB.foods),q,head,neg,unit,rec);
+  if(lib && lib.full) return lib;
+  const names=new Set(Object.values(DB.foods).map(f=>f.name.toLowerCase()));
+  const ref=scoreFoods(BUILTIN.filter(f=>!DB.foods[f.id]&&!names.has(f.name.toLowerCase())),q,head,neg,unit,rec);
+  if(ref && (ref.full || !lib)) return {...ref,ref:true};
+  return lib || ref;
+}
+// try the whole phrase, then shorter versions ("thyme leaves from small stalks" → "thyme")
+function matchPhrase(words,unit){
+  for(let n=words.length;n>=1;n--){ for(let st=0;st+n<=words.length;st++){ const m=matchFood(words.slice(st,st+n).join(" "),unit); if(m && (m.full || n===1)) return m; } }
+  return matchFood(words.join(" "),unit);
 }
 const PORTION={slice:35,chocolate:5,egg:50,avocado:150,banana:118,apple:182,pear:178,orange:131,kiwi:69,date:24,bagel:85,bread:35,toast:35,tomato:120,potato:170,carrot:61,pepper:120,onion:110,cucumber:200,zucchini:200,lemon:58,clove:5,mushroom:18,chicken:120,salmon:120,steak:150,breast:170,thigh:100,fillet:140,tortilla:45,cake:9,muffin:110,cookie:15,square:10};
 const GROUP_DEFAULT={"Protein":120,"Dairy":150,"Vegetables":80,"Fruit":120,"Grains & starches":150,"Legumes":130,"Nuts & seeds":28,"Fats & oils":10,"Pantry":10,"Sweets & treats":25,"Drinks":250,"Recipes":250,"Other":100};
@@ -993,10 +1060,10 @@ function portionG(f,words){ for(const w of [...words].reverse()){ const k=sing(w
 function unitToG(f,qty,unit,words){
   const g=f.group||"", leafy=/spinach|lettuce|arugula|greens|kale|spring mix|romaine/i.test(f.name), fat=g==="Fats & oils"||/oil|butter|mayo/i.test(f.name);
   switch(true){
-    case /^(g|gr|grams?|gs)$/.test(unit): return qty;
+    case /^(g|gr|gm|gms|grams?|gs)$/.test(unit): return qty;
     case /^(kg|kilos?)$/.test(unit): return qty*1000;
-    case /^(ml|millilit)/.test(unit): return qty;
-    case /^(l|lit)/.test(unit): return qty*1000;
+    case /^(ml|millilit(?:er|re)s?)$/.test(unit): return qty;
+    case /^(l|lit(?:er|re)s?)$/.test(unit): return qty*1000;
     case /^(oz|ounce)/.test(unit): return qty*28.35;
     case /^cup/.test(unit): return qty*(leafy?30:g==="Grains & starches"||g==="Legumes"?160:g==="Fruit"?150:g==="Vegetables"?90:g==="Dairy"?245:g==="Nuts & seeds"?140:g==="Drinks"?240:150);
     case /^(tbsp|tbs|tablespoon|spoon)/.test(unit): return qty*(fat?13.5:/peanut|nut butter|almond butter/i.test(f.name)?16:/honey|syrup|maple/i.test(f.name)?21:15);
@@ -1006,6 +1073,10 @@ function unitToG(f,qty,unit,words){
     case /^scoop/.test(unit): return qty*30;
     case /^(can)/.test(unit): return qty*(g==="Legumes"?240:/tuna/i.test(f.name)?120:400);
     case /^glass/.test(unit): return qty*250;
+    case /^(stalk|sprig|leaf|leaves)/.test(unit): return qty*(f.pieceG||(/celery/i.test(f.name)?40:/rhubarb/i.test(f.name)?50:g==="Herbs & spices"?0.5:15));
+    case /^bunch/.test(unit): return qty*(g==="Herbs & spices"?30:300);
+    case /^head/.test(unit): return qty*(/garlic/i.test(f.name)?40:/lettuce|cabbage|cauliflower|broccoli/i.test(f.name)?500:300);
+    case /^knob/.test(unit): return qty*15;
     case /^(slice|piece|pcs|serving|portion|square|wedge|fillet|clove|pump)/.test(unit): return qty*(f.pieceG||portionG(f,[unit.replace(/s$/,""),...words]));
     default: return qty*(f.pieceG||portionG(f,words));
   }
@@ -1016,43 +1087,64 @@ function amountFor(f,qty,unit,words){
     if(unit && !unitMatches(f,unit) && f.pieceG && !/^(piece|pcs)/.test(unit)) return {pieces:Math.max(0.5,Math.round(unitToG(f,qty,unit,words)/f.pieceG*2)/2),grams:0,notes};
     return {pieces:qty||1,grams:0,notes};
   }
-  if(qty==null && !unit){ const g=f.pieceG||portionG(f,words); notes.push(`assumed ${Math.round(g)} g of ${f.name}`); return {grams:Math.round(g),pieces:null,notes}; }
+  const rg=g=>g<10?Math.round(g*10)/10:Math.round(g);
+  if(qty==null && !unit){ const g=f.pieceG||portionG(f,words); notes.push(`assumed ${rg(g)} g of ${f.name}`); return {grams:rg(g),pieces:null,notes}; }
   const g=unitToG(f,qty==null?1:qty,unit||"",words);
-  if(!unit || !/^(g|gr|grams?|gs|kg|kilos?|ml|oz|ounces?)$/.test(unit)) notes.push(`${qty==null?1:qty}${unit?" "+unit:""} ${f.name} ≈ ${Math.round(g)} g`);
-  return {grams:Math.round(g),pieces:null,notes};
+  if(!unit || !METRIC.test(unit)) notes.push(`${qty==null?1:qty}${unit?" "+unit:""} ${f.name} ≈ ${rg(g)} g`);
+  return {grams:rg(g),pieces:null,notes};
+}
+const SIZE={large:1.25,big:1.25,jumbo:1.5,huge:1.5,small:0.7,little:0.7,medium:1};
+const METRIC=/^(g|gr|gm|gms|grams?|gs|kg|kilos?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|oz|ounces?)$/;
+function parseChunk(ch,recipe){
+  const w=ch.split(/\s+/).filter(Boolean); let qty=null, unit=null, size=1; const rest=[];
+  for(let k=0;k<w.length;k++){
+    if(SIZE[w[k]]){ size=SIZE[w[k]]; continue; }
+    if(qty==null && /^\d+(\.\d+)?$/.test(w[k])){ qty=parseFloat(w[k]); if(w[k+1]&&UNIT_RE.test(w[k+1])){ unit=w[k+1]; k++; } continue; }
+    if(qty==null && (w[k]==="a"||w[k]==="an") && rest.length===0){ qty=1; if(w[k+1]&&UNIT_RE.test(w[k+1])){ unit=w[k+1]; k++; } continue; }
+    if(!unit && UNIT_RE.test(w[k]) && rest.length===0 && qty==null){ unit=w[k]; continue; }
+    rest.push(w[k]);
+  }
+  let words=rest.filter(x=>!FILLER.has(x)&&!/^\d/.test(x)&&x!=="a"&&x!=="an");
+  if(!unit){ const u=words.findIndex((x,ix)=>UNIT_RE.test(x) && !/^(l|g|gs)$/.test(x) && (ix>0||words.length>1)); if(u>=0 && words.length>1){ unit=words[u]; words=words.filter((_,ix)=>ix!==u); } }
+  if(!words.length) return null;
+  const phrase=words.join(" "), m=recipe?matchPhrase(words,unit):matchFood(phrase,unit), notes=[];
+  if(!m) return {item:{name:phrase,libraryId:null,grams:0,pieces:null,on:false,said:phrase,qty,unit,unmatched:true,kcal:0,p:0,c:0,f:0,fb:0},notes};
+  const a=amountFor(m.f,qty,unit,words);
+  if(size!==1 && !(unit&&METRIC.test(unit))){ if(a.grams){ const g=a.grams*size; a.grams=g<10?Math.round(g*10)/10:Math.round(g); } else if(a.pieces) a.pieces=Math.round(a.pieces*size*4)/4; }
+  notes.push(...a.notes.map(n=>size!==1?n.replace(/≈ [\d.]+ g|assumed [\d.]+ g/,x=>x.replace(/[\d.]+/,String(a.grams||a.pieces))):n));
+  if(!m.full) notes.push(`"${phrase}" → closest match ${m.f.name}`);
+  return {item:{name:m.f.name,libraryId:m.f.id,grams:a.grams,pieces:a.pieces,on:true,said:phrase,qty,unit,close:!m.full,ref:!!m.ref,kcal:0,p:0,c:0,f:0,fb:0},notes};
+}
+const PREP=/\b(chopped|diced|minced|crushed|sliced|grated|peeled|cored|seeded|deseeded|trimmed|rinsed|drained|finely|roughly|thinly|coarsely|freshly|fresh|free[- ]range|organic|to taste|optional|divided|softened|melted|room temperature|if desired|for serving|for garnish|packed|heaped|level|approximately|about|around|plus extra|extra)\b/g;
+function recipeParse(text){
+  let lines=String(text).split(/\r?\n/).map(x=>x.trim()).filter(x=>/[a-z]/i.test(x));
+  if(lines.length===1 && lines[0].includes(",")) return localParse(lines[0]);
+  const items=[], notes=[];
+  lines.forEach(line=>{
+    let t=line.toLowerCase().replace(/^\s*([*•·▪●\-–—]+|\d+[.)])\s*/,"").replace(/\([^)]*\)/g," ").replace(/\[[^\]]*\]/g," ");
+    t=t.replace(/½/g," 0.5 ").replace(/¼/g," 0.25 ").replace(/¾/g," 0.75 ").replace(/⅓/g," 0.33 ").replace(/(\d+)\s*\/\s*(\d+)/g,(m,a,b)=>String(Math.round(a/b*100)/100));
+    t=t.replace(/(\d+(?:\.\d+)?)\s*(?:–|—|-|to)\s*(\d+(?:\.\d+)?)/g,(m,a,b)=>String((parseFloat(a)+parseFloat(b))/2));
+    t=t.replace(/(\d)(gms|gm|g|kg|ml|oz|gr|tbsp|tsp)\b/g,"$1 $2").split(",")[0].replace(PREP," ").replace(/[^a-z0-9.%\s-]/g," ").replace(/\s+/g," ").trim();
+    t=wordsToNumbers(t);
+    if(!t || /^(water|ice|salt and pepper)\b/.test(t)) return;
+    const r=parseChunk(t,true); if(r){ items.push(r.item); notes.push(...r.notes); }
+  });
+  return {meal:null,items,note:notes.join(" · ")};
 }
 function localParse(text){
   let t=" "+String(text).toLowerCase().replace(/½/g," 0.5 ").replace(/¼/g," 0.25 ").replace(/¾/g," 0.75 ").replace(/(\d)\s*\/\s*2\b/g,(m,a)=>String(a/2)).replace(/(\d)\s*\/\s*4\b/g,(m,a)=>String(a/4))
-    .replace(/(\d)(g|kg|ml|oz|gr)\b/g,"$1 $2").replace(/[“”"!?]/g," ").replace(/\s+/g," ")+" ";
+    .replace(/(\d)(gms|gm|g|kg|ml|oz|gr)\b/g,"$1 $2").replace(/[“”"!?]/g," ").replace(/\s+/g," ")+" ";
   let meal=null;
   const mm=t.match(/\b(breakfast|lunch|dinner|supper|dessert|snack)\b/); if(mm) meal={breakfast:"breakfast",lunch:"lunch",dinner:"dinner",supper:"dinner",dessert:"dessert",snack:"other"}[mm[1]];
   t=t.replace(/\b(for|at|as|with|from|my)\s+(a\s+)?(breakfast|lunch|dinner|supper|dessert|snack)\b/g," , ").replace(/\b(breakfast|lunch|dinner|supper|dessert|snack)\b/g," ");
   t=wordsToNumbers(t.replace(/[.;]/g," , ").replace(/\s+/g," ").trim());
   const chunks=t.split(/\s*,\s*|\s+(?:and then|then|and|plus|with|also|on top of|on it|on top)\s+/).map(s=>s.trim()).filter(Boolean);
   const items=[], notes=[];
-  chunks.forEach(ch=>{
-    const w=ch.split(/\s+/); let qty=null, unit=null; const rest=[];
-    for(let k=0;k<w.length;k++){
-      if(qty==null && /^\d+(\.\d+)?$/.test(w[k])){ qty=parseFloat(w[k]); if(w[k+1]&&UNIT_RE.test(w[k+1])){ unit=w[k+1]; k++; } continue; }
-      if(qty==null && (w[k]==="a"||w[k]==="an") && rest.length===0){ qty=1; if(w[k+1]&&UNIT_RE.test(w[k+1])){ unit=w[k+1]; k++; } continue; }
-      if(!unit && UNIT_RE.test(w[k]) && rest.length===0 && qty==null){ unit=w[k]; continue; }
-      rest.push(w[k]);
-    }
-    const words=rest.filter(x=>!FILLER.has(x)&&!/^\d/.test(x)&&x!=="a"&&x!=="an");
-    if(!words.length) return;
-    const phrase=words.join(" "), m=matchFood(phrase,unit);
-    if(m){
-      const a=amountFor(m.f,qty,unit,words); notes.push(...a.notes);
-      if(!m.full) notes.push(`"${phrase}" → closest match ${m.f.name}`);
-      items.push({name:m.f.name,libraryId:m.f.id,grams:a.grams,pieces:a.pieces,on:true,said:phrase,qty,unit,close:!m.full,kcal:0,p:0,c:0,f:0,fb:0});
-    } else {
-      items.push({name:phrase,libraryId:null,grams:0,pieces:null,on:false,said:phrase,qty,unit,unmatched:true,kcal:0,p:0,c:0,f:0,fb:0});
-    }
-  });
+  chunks.forEach(ch=>{ const r=parseChunk(ch,false); if(r){ items.push(r.item); notes.push(...r.notes); } });
   return {meal,items,note:notes.join(" · ")};
 }
 function pickFoodFor(i,id){
-  const f=DB.foods[id]; if(!f) return;
+  const f=foodById(id); if(!f) return;
   if(i.said){ const map={...sayMap(),[sayKey(i.said)]:id}; put("settings","saymap",{map}); }
   const a=amountFor(f,i.qty,i.unit,String(i.said||"").split(/\s+/));
   Object.assign(i,{libraryId:f.id,name:f.name,grams:a.grams,pieces:a.pieces,on:true,unmatched:false,close:false});
@@ -1154,7 +1246,7 @@ async function lookup(){
 function showBc(msg){ $("bcOut").innerHTML=`<b>${esc(bcFood.name)}</b><br>${fmt(bcFood.kcal)} kcal · ${bcFood.p} P · ${bcFood.c} C · ${bcFood.f} F per 100 g<br>${esc(msg)}`; $("bcAmtWrap").hidden=false; $("bcAmt").focus(); updAdd(); }
 
 /* ================= foods ================= */
-const GROUPS=["Protein","Dairy","Vegetables","Fruit","Grains & starches","Legumes","Nuts & seeds","Fats & oils","Pantry","Sweets & treats","Drinks","Recipes","Other"];
+const GROUPS=["Protein","Dairy","Vegetables","Fruit","Grains & starches","Legumes","Nuts & seeds","Fats & oils","Herbs & spices","Pantry","Sweets & treats","Drinks","Recipes","Other"];
 let FFILTER="all", FGROUP="";
 $("fGroup").innerHTML=GROUPS.map(g=>`<option>${esc(g)}</option>`).join("");
 function renderChips(){
@@ -1209,7 +1301,7 @@ function openRecipe(f){
   if(f && f.recipe && f.recipe.ingredients){ REC={id:f.id,name:f.name,ings:JSON.parse(JSON.stringify(f.recipe.ingredients)),pot:f.recipe.pot||"",weight:f.recipe.cookedWeight||""}; }
   else REC={name:"",ings:[],pot:"",weight:""};
   $("recTitle").textContent = REC.id?"Edit recipe":"New recipe";
-  $("rName").value=REC.name; $("rText").value=""; $("rAiStatus").textContent=""; $("rSearch").value=""; $("rPick").hidden=true;
+  $("rName").value=REC.name; $("rText").value=""; recStatus(""); $("rSearch").value=""; $("rPick").hidden=true;
   $("rPot").innerHTML='<option value="">No pot (enter cooked weight)</option>'+pots().map((p,i)=>`<option value="${i}">${esc(p.name)} (${p.g} g)</option>`).join("");
   $("rPot").value = REC.pot===""?"":String(REC.pot);
   $("rW").value = REC.weight;
@@ -1222,9 +1314,9 @@ $("rPot").onchange=()=>{ REC.pot=$("rPot").value; updRec(); };
 $("rW").oninput=()=>{ REC.weight=$("rW").value; updRec(); };
 function renderRec(){
   $("rIngs").innerHTML = REC.ings.length ? REC.ings.map((g,n)=>{ const f=g.foodId&&DB.foods[g.foodId]; const v=ingVals(g); const unit=(f?f.basis:g.basis)==="unit";
-    return `<div class="ing"><div><b>${esc(f?f.name:g.name)}</b><small>${fmt(v.kcal)} kcal · ${v.p} P${f?"":" · not in library"}</small></div><input type="text" data-a="${n}" value="${g.amount??""}" step="any" inputmode="decimal" aria-label="${unit?"Pieces":"Grams"}" placeholder="${unit?"pcs":"g"}"><button class="x" data-rm="${n}" aria-label="Remove">×</button>${
-      f?"":`<div class="per">${NUT.map(k=>`<label>${k==="kcal"?"kcal":k==="fb"?"fibre":k.toUpperCase()}/100g<input type="text" data-n="${n}" data-k="${k}" value="${g.per&&g.per[k]!=null?g.per[k]:""}" step="any" inputmode="decimal"></label>`).join("")}</div>`}</div>`; }).join("")
-    : `<div class="empty">No ingredients yet. Fill from a photo, paste a list, or search your library below.</div>`;
+    return `<div class="ing"><div><b>${esc(f?f.name:g.name)}</b><small>${fmt(v.kcal)} kcal · ${v.p} P${f?"":g.ref?" · built-in value":" · not in library"}${g.said&&!f?"":""}</small></div><input type="text" data-a="${n}" value="${g.amount??""}" step="any" inputmode="decimal" aria-label="${unit?"Pieces":"Grams"}" placeholder="${unit?"pcs":"g"}"><button class="x" data-rm="${n}" aria-label="Remove">×</button>${
+      (f||g.ref)?"":`<div class="per">${NUT.map(k=>`<label>${k==="kcal"?"kcal":k==="fb"?"fibre":k.toUpperCase()}/100g<input type="text" data-n="${n}" data-k="${k}" value="${g.per&&g.per[k]!=null?g.per[k]:""}" step="any" inputmode="decimal"></label>`).join("")}</div>`}</div>`; }).join("")
+    : `<div class="empty">No ingredients yet. Paste the recipe above and tap Read ingredients, or search your library below.</div>`;
   $("rIngs").querySelectorAll("[data-a]").forEach(i=>i.oninput=()=>{ REC.ings[i.dataset.a].amount=parseFloat(i.value)||0; updRec(); });
   $("rIngs").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{ REC.ings.splice(+b.dataset.rm,1); renderRec(); });
   $("rIngs").querySelectorAll("[data-k]").forEach(i=>i.oninput=()=>{ const g=REC.ings[i.dataset.n]; g.per=g.per||{}; g.per[i.dataset.k]=parseFloat(i.value)||0; updRec(); });
@@ -1261,7 +1353,7 @@ For ingredients with a library match on a per-piece basis, give "pieces" instead
 For every ingredient also give "per100": kcal, p, c, f, fb per 100 g of that raw ingredient (standard USDA / Canadian Nutrient File values). Skip water and salt.
 Return ONLY JSON: {"name":"","ingredients":[{"name":"","grams":0,"pieces":null,"libraryId":null,"per100":{"kcal":0,"p":0,"c":0,"f":0,"fb":0}}]}`;
 async function aiRecipe(images,text){
-  $("rAiStatus").innerHTML='<span class="spin"></span>Reading the recipe…';
+  recStatus('<span class="spin"></span>Reading the recipe…');
   try{
     const j=await askAI(RECIPE_SYS,"User's library:\n"+libraryIndex()+"\n\nRecipe:\n"+(text||"(see photo)"),images||[]);
     if(j.name && !$("rName").value) { $("rName").value=j.name; REC.name=j.name; }
@@ -1270,13 +1362,36 @@ async function aiRecipe(images,text){
       if(f) REC.ings.push({foodId:f.id,amount: f.basis==="unit" ? (i.pieces||1) : Math.round(+i.grams||0)});
       else REC.ings.push({foodId:null,name:i.name,amount:Math.round(+i.grams||0),per:i.per100||{},basis:"100g"});
     });
-    $("rAiStatus").textContent=`Added ${(j.ingredients||[]).length} ingredients. Check the grams, then weigh the cooked batch.`;
+    recStatus(`Added ${(j.ingredients||[]).length} ingredients. Check the grams, then weigh the cooked batch.`);
     renderRec();
-  }catch(e){ $("rAiStatus").textContent=aiErr(e); }
+  }catch(e){ showAiErr("rAiStatus",e); }
 }
+function recStatus(t,err){ const b=$("rAiStatus"); b.hidden=!t; b.className="alert"+(err?" err":""); b.innerHTML=t; }
+const aiOn = () => !!(DB.settings.prefs && DB.settings.prefs.sayAI);
+function localRecipe(text){
+  const r=recipeParse(text); let n=0; const miss=[];
+  r.items.forEach(i=>{
+    const f=i.libraryId&&foodById(i.libraryId);
+    if(f && !DB.foods[f.id]) REC.ings.push({foodId:null,ref:f.id,name:f.name,amount:i.grams,per:{kcal:f.kcal,p:f.p,c:f.c,f:f.f,fb:f.fb},basis:"100g",said:i.said});
+    else if(f) REC.ings.push({foodId:f.id,amount:f.basis==="unit"?(i.pieces||1):i.grams,said:i.said});
+    else { const u=i.unit||"", q=i.qty||1, g=METRIC.test(u)?unitToG({group:"Other",name:""},q,u,[]):/^(tbsp|tbs|tablespoon)/.test(u)?q*15:/^(tsp|teaspoon)/.test(u)?q*5:/^cup/.test(u)?q*240:"";
+      REC.ings.push({foodId:null,name:i.said,amount:g===""?"":Math.round(g),per:{},basis:"100g"}); miss.push(i.said); }
+    n++;
+  });
+  renderRec();
+  recStatus(`Read ${n} ingredient${n===1?"":"s"}. Check the grams, then weigh the cooked batch.`
+    + (r.note?`<small>${esc(r.note)}</small>`:"")
+    + (miss.length?`<small>Not found, add the numbers per 100 g: ${esc(miss.join(", "))}</small>`:""));
+}
+$("rPhotoBtn").onclick=()=>{
+  if(aiOn()){ $("rPhoto").click(); return; }
+  recStatus(`<b>Free way on iPhone:</b> open the recipe photo (or point your Camera at the page), press and hold on the text, tap <b>Select All</b>, then <b>Copy</b>. Come back, paste it in the box below and tap <b>Read ingredients</b>.<small>Reading photos directly needs the AI switch in Settings.</small>`);
+  $("rText").focus();
+};
 $("rPhoto").onchange=async e=>{ const files=[...e.target.files].slice(0,4); if(!files.length) return; const imgs=await Promise.all(files.map(f=>fileToJpeg(f,1600))); aiRecipe(imgs,$("rText").value); };
-$("rParse").onclick=()=>{ if(!$("rText").value.trim()){ toast("Paste the ingredients first"); return; } aiRecipe([], $("rText").value); };
+$("rParse").onclick=()=>{ if(!$("rText").value.trim()){ toast("Paste the ingredients first"); return; } if(aiOn()) aiRecipe([], $("rText").value); else localRecipe($("rText").value); };
 $("rSave").onclick=()=>{
+  REC.ings.forEach(g=>{ if(g.ref){ ensureInLibrary(g.ref); g.foodId=g.ref; delete g.ref; delete g.per; delete g.name; delete g.basis; } });
   const {t,raw}=recTotals(), cw=cookedWeight(raw), name=$("rName").value.trim();
   const id=REC.id||slug(name);
   const per={}; NUT.forEach(k=>per[k]=r1(t[k]/cw*100));

@@ -66,6 +66,73 @@ test.describe("Foods and recipes", () => {
     expect(r).toMatchObject({ kcal: 131.3, group: "Recipes" });
     expect(r.recipe.batchWeight).toBe(800);
   });
+
+  const PATE = `* 500gm free-range chicken livers
+* 100gm butter (and a bit extra to coat the top if desired)
+* 1 large onion (white), chopped
+* 1 – 2 cloves garlic, crushed
+* 2 – 4  bay leaves
+* Thyme leaves from about 4 small stalks
+* 1 apple
+* 1 big carrot`;
+  const amountOf = (app, name) => app.locator("#rIngs .ing", { hasText: name }).locator("[data-a]");
+
+  test("R2 pasted recipe is read without AI, every line becomes an ingredient", async ({ app, sheet }) => {
+    await goTab(app, "foods");
+    await app.click("#newRecipe");
+    await app.fill("#rName", "Liver pâté");
+    await app.fill("#rText", PATE);
+    await app.click("#rParse");
+    await expect(app.locator("#rIngs .ing")).toHaveCount(8);
+    expect(sheet.log).not.toContain("ai");
+    await expect(amountOf(app, "Chicken liver")).toHaveValue("500");
+    await expect(amountOf(app, "Butter")).toHaveValue("100");
+    await expect(amountOf(app, "Garlic")).toHaveValue("7.5");     // 1–2 cloves → 1.5 × 5 g
+    await expect(amountOf(app, "Bay leaf")).toHaveValue("0.6");   // 2–4 leaves → 3 × 0.2 g
+    await expect(amountOf(app, "Onion")).toHaveValue("138");      // 1 large onion ≈ 110 g × 1.25
+    await expect(app.locator("#rAiStatus")).toContainText("8 ingredients");
+  });
+
+  test("R3 weigh the batch → per-100 g numbers; built-in foods join your library on save", async ({ app, sheet }) => {
+    await goTab(app, "foods");
+    await app.click("#newRecipe");
+    await app.fill("#rName", "Liver pâté");
+    await app.fill("#rText", PATE);
+    await app.click("#rParse");
+    await app.fill("#rW", "880");
+    await expect(app.locator("#rPer")).toContainText("880 g batch");
+    await app.click("#rSave");
+    await synced(app);
+    const r = Object.values(sheet.data.foods).find(f => f.name === "Liver pâté");
+    expect(r.recipe.batchWeight).toBe(880);
+    expect(r.kcal).toBeGreaterThan(150); expect(r.kcal).toBeLessThan(200);
+    expect(r.p).toBeGreaterThan(8); expect(r.p).toBeLessThan(12);
+    const liver = Object.values(sheet.data.foods).find(f => /chicken liver/i.test(f.name));
+    expect(liver).toBeTruthy();
+    expect(r.recipe.ingredients.every(g => g.foodId)).toBeTruthy();
+  });
+
+  test("R4 'From a photo' without AI explains the free iPhone way (copy text from the photo)", async ({ app, sheet }) => {
+    await goTab(app, "foods");
+    await app.click("#newRecipe");
+    await app.click("#rPhotoBtn");
+    await expect(app.locator("#rAiStatus")).toContainText("Copy");
+    expect(sheet.log).not.toContain("ai");
+  });
+
+  test("R5 Say uses built-in foods when your library doesn't have them", async ({ app, sheet }) => {
+    await goTab(app, "today");
+    await app.click("#fab");
+    await app.click('#modeSeg [data-m="say"]');
+    await app.fill("#sayText", "200 grams of chicken livers");
+    await app.click("#aAdd");
+    await expect(app.locator("#sayOut")).toContainText("Chicken liver (raw)");
+    await app.click("#aAdd");
+    await synced(app);
+    expect(Object.values(sheet.data.foods).some(f => f.name === "Chicken liver (raw)")).toBeTruthy();
+    const e = (sheet.day(todayIso()) || {}).entries || [];
+    expect(e[0]).toMatchObject({ name: "Chicken liver (raw)", amount: 200 });
+  });
 });
 
 test.describe("Body, goal and plan", () => {

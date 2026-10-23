@@ -69,6 +69,10 @@ Tests run against a **fake Google Sheet** (an in-memory copy of `apps-script/Cod
 | F3 | Clear a note | Empty the note → Save → note is gone (not kept) |
 | F4 | Favourite | ★ → stays a favourite after reload |
 | R1 | Recipe with pot | Ingredients + full pot weight − pot → per-100 g numbers right → saved |
+| R2 | Paste a recipe, no AI | Liver pâté list (bullets, "500gm", ranges "1 – 2", "(…)", "chopped") → 8 ingredients with sensible grams, no AI call |
+| R3 | Weigh the batch | Cooked weight → per-100 g; saving adds built-in foods (e.g. chicken liver) to the library |
+| R4 | Photo without AI | "From a photo" explains copying text from the photo (iPhone Live Text), no AI call |
+| R5 | Built-in foods in Say | "200 grams of chicken livers" → built-in Chicken liver; saving adds it to the library |
 
 ## Body, goal & plan
 
