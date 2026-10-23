@@ -41,7 +41,7 @@ export class FakeSheet {
   }
   async handle(route) {
     const req = JSON.parse(route.request().postData() || "{}");
-    this.log.push(req.action);
+    this.log.push(req.action); this.lastReq = req;
     if (this.offline) return route.abort("internetdisconnected");
     if (this.aiHtml && req.action === "ai") return route.fulfill({ status: 200, contentType: "text/html", body: this.aiHtml });
     // snapshot for load happens at the START of the request (like a real read)
@@ -74,7 +74,7 @@ export class FakeSheet {
         const sys = String(req.system || "");
         if (/spoken or typed/.test(sys)) return { ok: true, text: JSON.stringify(SAY_REPLY) };
         if (/nutrition facts label/.test(sys)) return { ok: true, text: JSON.stringify({ name: "Test bar", servingG: 40, per100: { kcal: 400, p: 20, c: 45, f: 15, fb: 8 } }) };
-        if (/recipe/i.test(sys)) return { ok: true, text: JSON.stringify({ name: "", ingredients: [] }) };
+        if (/recipe/i.test(sys)) return { ok: true, text: JSON.stringify({ name: "Photo oats", ingredients: [{ name: "Rolled oats", grams: 80, libraryId: "oats", per100: { kcal: 379, p: 13, c: 68, f: 6.5, fb: 10 } }, { name: "Maple syrup", grams: 20, libraryId: null, per100: { kcal: 260, p: 0, c: 67, f: 0.1, fb: 0 } }] }) };
         return { ok: true, text: JSON.stringify(PHOTO_REPLY) };
       }
       default: return { ok: false, error: "unknown_action" };

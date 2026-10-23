@@ -70,4 +70,28 @@ test.describe("Save & sync safety", () => {
     await expect(app.locator("#toast")).toContainText(/waiting|offline|later/i);
     await expect(app.locator("#toast")).not.toContainText("saved to your Sheet");
   });
+
+  test("Y6 import only adds: nothing already in Budgie is changed or lost", async ({ app, sheet }) => {
+    const today = todayIso();
+    sheet.data.days[today] = { date: today, entries: [{ id: "mine", meal: "breakfast", name: "My oats", kcal: 150, p: 5, c: 27, f: 3, fb: 4 }] };
+    sheet.data.body[today] = { date: today, kg: 66 };
+    await app.reload(); await synced(app);
+    const file = {
+      foods: { egg: { id: "egg", name: "Egg, CHANGED", basis: "unit", unit: "egg", kcal: 999, p: 0, c: 0, f: 0, fb: 0 },
+               tofu: { id: "tofu", name: "Tofu firm", basis: "100g", kcal: 144, p: 17, c: 3, f: 9, fb: 2 } },
+      days: { [today]: { date: today, entries: [{ id: "mine", meal: "breakfast", name: "Overwritten?", kcal: 1 }, { id: "new1", meal: "lunch", name: "Soup", kcal: 200, p: 10, c: 20, f: 5, fb: 4 }] } },
+      body: { [today]: { date: today, kg: 99 } },
+      settings: { plan: { kcalLow: 1000, kcalHigh: 1100, protein: 50, fibre: 10 } },
+    };
+    await goTab(app, "settings");
+    await app.setInputFiles("#impFile", { name: "add.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(file)) });
+    await expect(app.locator("#toast")).toContainText(/Added/);
+    await synced(app);
+    expect(sheet.data.foods.egg.name).toBe("Egg, large");          // existing food untouched
+    expect(sheet.data.foods.tofu).toBeTruthy();                       // new food added
+    const e = sheet.data.days[today].entries;
+    expect(e.map(x => x.name)).toEqual(["My oats", "Soup"]);          // kept mine, added the new one
+    expect(sheet.data.body[today].kg).toBe(66);                       // weigh-in untouched
+    expect(sheet.data.settings.plan.kcalLow).toBe(1750);              // plan untouched
+  });
 });

@@ -45,6 +45,23 @@ test.describe("Foods and recipes", () => {
     await expect(app.locator('#foodList [data-star="egg"]')).toHaveAttribute("aria-pressed", "true");
   });
 
+  test("F5 Add common foods: adds basics like white and whole wheat bread, keeps yours, no duplicates", async ({ app, sheet }) => {
+    await goTab(app, "foods");
+    await app.click("#addCommon");
+    await expect(app.locator("#toast")).toContainText(/Added \d+ common foods/);
+    await synced(app);
+    const names = Object.values(sheet.data.foods).map(f => f.name);
+    expect(names).toContain("White bread");
+    expect(names).toContain("Whole wheat bread");
+    expect(names.filter(n => /^egg, large$/i.test(n))).toHaveLength(1);   // you already had eggs: not duplicated
+    expect(sheet.data.foods.egg.kcal).toBe(72);                          // and yours is unchanged
+    const count = Object.keys(sheet.data.foods).length;
+    await app.click("#addCommon");
+    await expect(app.locator("#toast")).toContainText(/already/i);
+    await synced(app);
+    expect(Object.keys(sheet.data.foods).length).toBe(count);
+  });
+
   test("R1 recipe with a pot gives the right per-100 g numbers", async ({ app, sheet }) => {
     sheet.data.settings.pots = { pots: [{ name: "Dutch oven", g: 2000 }] };
     await bgSync(app); await synced(app);
@@ -110,6 +127,23 @@ test.describe("Foods and recipes", () => {
     const liver = Object.values(sheet.data.foods).find(f => /chicken liver/i.test(f.name));
     expect(liver).toBeTruthy();
     expect(r.recipe.ingredients.every(g => g.foodId)).toBeTruthy();
+  });
+
+  test("R6 Read ingredients without a name: Save stays tappable and says what's missing", async ({ app, sheet }) => {
+    await goTab(app, "foods");
+    await app.click("#newRecipe");
+    await app.fill("#rText", PATE);
+    await app.click("#rParse");
+    await expect(app.locator("#rIngs .ing")).toHaveCount(8);
+    await expect(app.locator("#rSave")).toBeEnabled();
+    await app.click("#rSave");
+    await expect(app.locator("#rMissing")).toContainText("name");
+    await expect(app.locator("#rName")).toBeFocused();
+    await app.fill("#rName", "Liver pâté");
+    await app.click("#rSave");
+    await expect(app.locator("#recSheet")).toBeHidden();
+    await synced(app);
+    expect(Object.values(sheet.data.foods).some(f => f.name === "Liver pâté")).toBeTruthy();
   });
 
   test("R4 'From a photo' without AI explains the free iPhone way (copy text from the photo)", async ({ app, sheet }) => {

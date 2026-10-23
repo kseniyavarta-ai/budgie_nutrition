@@ -319,6 +319,7 @@ details summary{list-style:none}
       <button class="btn" id="newRecipe">New recipe</button>
       <button class="btn ghost" id="newFood">New food</button>
     </div>
+    <button class="btn ghost" id="addCommon" type="button">Add common foods to my library</button>
     <input type="search" id="fSearch" placeholder="Search your foods and recipes" aria-label="Search foods">
     <div class="seg" id="fFilter">
       <button aria-pressed="true" data-f="all">All</button>
@@ -531,7 +532,8 @@ details summary{list-style:none}
       </div>
       <div class="preview" id="rPer">Per 100 g: –</div>
     </div>
-    <button class="btn" id="rSave" disabled>Save recipe</button>
+    <div class="alert err" id="rMissing" hidden></div>
+    <button class="btn" id="rSave">Save recipe</button>
     <button class="btn danger" id="rDel" hidden>Delete recipe</button>
   </div>
 </div>
@@ -542,7 +544,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.23 · recipes-free";
+const VERSION = "v2026.10.23 · qa-full";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -873,6 +875,8 @@ $("aAdd").onclick=()=>{
   else { saveEntries([...cur,...add]); toast(add.length>1?"Added "+add.length+" items":"Added "+add[0].name); LS.set("budgie-mode",MODE==="barcode"?"lib":MODE); }
   closeSheet();
 };
+$("m-quick").onsubmit=e=>e.preventDefault();
+$("m-quick").onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); if(!$("aAdd").disabled) $("aAdd").click(); } }; // Return/Go on the keyboard adds it
 $("aDel").onclick=()=>{ if(!editing) return; saveEntries(dayEntries().filter(e=>e.id!==editing.id)); closeSheet(); toast("Removed"); };
 
 /* ----- photo AI ----- */
@@ -960,7 +964,34 @@ const BUILTIN = [
  ["lemon","Lemon","Fruit",29,1.1,9.3,0.3,2.8],["lime","Lime","Fruit",30,0.7,10.5,0.2,2.8],
  ["raisins","Raisins","Fruit",299,3.1,79,0.5,3.7],["dried-cranberries","Dried cranberries","Fruit",308,0.2,82.4,1.1,5.3],
  ["avocado","Avocado","Fruit",160,2,8.5,14.7,6.7],
- ["whole-wheat-bread","Whole wheat bread","Grains & starches",252,12.5,42.7,3.5,6],["white-bread","White bread","Grains & starches",266,7.6,50.6,3.3,2.4],
+ ["whole-wheat-bread","Whole wheat bread","Grains & starches",252,12.5,42.7,3.5,6,35],["white-bread","White bread","Grains & starches",266,7.6,50.6,3.3,2.4,30],
+ ["rye-bread","Rye bread","Grains & starches",259,8.5,48.3,3.3,5.8,32],["multigrain-bread","Multigrain bread","Grains & starches",265,13.4,43.3,4.2,7.4,35],
+ ["sourdough-bread","Sourdough bread","Grains & starches",272,10.6,51.9,2.4,2.2,40],["bagel","Bagel, plain","Grains & starches",257,10,50.5,1.6,2.1,100],
+ ["english-muffin","English muffin","Grains & starches",227,8.9,44.2,1.7,3.5,57],["pita","Pita, white","Grains & starches",275,9.1,55.7,1.2,2.2,60],
+ ["whole-wheat-pita","Pita, whole wheat","Grains & starches",266,9.8,55,2.6,7.4,64],["naan","Naan","Grains & starches",291,9.6,50.4,5.7,2.2,90],
+ ["tortilla","Tortilla, flour","Grains & starches",306,8,50,8,3.5,45],["corn-tortilla","Tortilla, corn","Grains & starches",218,5.7,44.6,2.9,6.3,26],
+ ["crackers","Crackers, saltine","Grains & starches",421,9.5,74,8.6,2.8,3],["rice-cakes","Rice cake, plain","Grains & starches",387,8.2,81.5,2.8,4.2,9],
+ ["granola","Granola","Grains & starches",489,13.7,53.9,24.3,8.7],["corn-flakes","Corn flakes","Grains & starches",357,7.5,84,0.4,3.3],
+ ["oats","Rolled oats (dry)","Grains & starches",379,13.2,67.7,6.5,10.1],["popcorn","Popcorn, air-popped","Grains & starches",387,12.9,77.8,4.5,14.5],
+ ["pasta","Pasta (cooked)","Grains & starches",158,5.8,30.9,0.9,1.8],["brown-rice","Brown rice (cooked)","Grains & starches",123,2.7,25.6,1,1.6],
+ ["quinoa","Quinoa (cooked)","Grains & starches",120,4.4,21.3,1.9,2.8],["sweet-potato","Sweet potato (raw)","Grains & starches",86,1.6,20.1,0.1,3],
+ ["greek-yogurt","Greek yogurt, plain 0%","Dairy",59,10.2,3.6,0.4,0],["plain-yogurt","Yogurt, plain 2%","Dairy",73,5.7,7.7,2,0],
+ ["cottage-cheese","Cottage cheese 2%","Dairy",86,11.8,3.7,2.3,0],["mozzarella","Mozzarella","Dairy",254,24,2.8,16,0],["feta","Feta","Dairy",264,14,4,21,0],
+ ["chicken-thigh","Chicken thigh, skinless (raw)","Protein",121,19.7,0,4.1,0],["ground-beef","Ground beef 90/10 (raw)","Protein",176,20,0,10,0],
+ ["pork-chop","Pork loin chop (raw)","Protein",143,21,0,6,0],["cod","Cod (raw)","Protein",82,17.8,0,0.7,0],["tuna","Tuna, canned in water","Protein",116,25.5,0,0.8,0],
+ ["broccoli","Broccoli (raw)","Vegetables",34,2.8,6.6,0.4,2.6],["spinach","Spinach (raw)","Vegetables",23,2.9,3.6,0.4,2.2],
+ ["cucumber","Cucumber","Vegetables",15,0.7,3.6,0.1,0.5],["bell-pepper","Bell pepper (raw)","Vegetables",31,1,6,0.3,2.1],
+ ["zucchini","Zucchini (raw)","Vegetables",17,1.2,3.1,0.3,1],["mushrooms","Mushrooms (raw)","Vegetables",22,3.1,3.3,0.3,1],
+ ["lettuce","Lettuce, romaine","Vegetables",17,1.2,3.3,0.3,2.1],["green-beans","Green beans (raw)","Vegetables",31,1.8,7,0.2,2.7],
+ ["blueberries","Blueberries","Fruit",57,0.7,14.5,0.3,2.4],["strawberries","Strawberries","Fruit",32,0.7,7.7,0.3,2],
+ ["raspberries","Raspberries","Fruit",52,1.2,11.9,0.7,6.5],["orange","Orange","Fruit",47,0.9,11.8,0.1,2.4,131],["grapes","Grapes","Fruit",69,0.7,18.1,0.2,0.9],
+ ["pear","Pear","Fruit",57,0.4,15.2,0.1,3.1,178],["peach","Peach","Fruit",39,0.9,9.5,0.3,1.5,150],["watermelon","Watermelon","Fruit",30,0.6,7.6,0.2,0.4],
+ ["lentils","Lentils (cooked)","Legumes",116,9,20.1,0.4,7.9],["chickpeas","Chickpeas, canned, drained","Legumes",139,7,23,2.6,6.4],
+ ["black-beans","Black beans, canned, drained","Legumes",132,8.9,24,0.5,8.7],["hummus","Hummus","Legumes",166,7.9,14.3,9.6,6],
+ ["almonds","Almonds","Nuts & seeds",579,21.2,21.6,49.9,12.5],["walnuts","Walnuts","Nuts & seeds",654,15.2,13.7,65.2,6.7],
+ ["peanut-butter","Peanut butter","Nuts & seeds",588,25,20,50,6],["chia","Chia seeds","Nuts & seeds",486,16.5,42.1,30.7,34.4],
+ ["honey","Honey","Sweets & treats",304,0.3,82.4,0,0.2],["jam","Jam","Sweets & treats",278,0.4,68.9,0.1,1.1],
+ ["dark-chocolate","Dark chocolate 70–85%","Sweets & treats",600,7.8,46,43,11],["maple-syrup","Maple syrup","Sweets & treats",260,0,67,0.1,0],
  ["flour","All-purpose flour","Grains & starches",364,10.3,76.3,1,2.7],["almond-flour","Almond flour","Grains & starches",571,21,21,50,11],
  ["rice-flour","Rice flour","Grains & starches",366,6,80,1.4,2.4],["cornstarch","Cornstarch","Pantry",381,0.3,91,0.1,0.9],
  ["white-rice","White rice (cooked)","Grains & starches",130,2.7,28,0.3,0.4],
@@ -1281,6 +1312,12 @@ function openFood(f){
   openSheet($("foodSheet")); if(!editFood) setTimeout(()=>{ if(!$("foodSheet").contains(document.activeElement)) $("fName").focus(); },60);
 }
 $("newFood").onclick=()=>openFood();
+function sameFood(a,b){ const ta=nameTokens(a), tb=nameTokens(b); if(!ta.length||!tb.length) return false; if(ta.join(" ")===tb.join(" ")) return true; return ta[0]===tb[0] && ta.every(t=>tb.includes(t)); }
+$("addCommon").onclick=()=>{
+  const lib=Object.values(DB.foods); let n=0;
+  BUILTIN.forEach(b=>{ if(DB.foods[b.id] || lib.some(f=>sameFood(b,f))) return; ensureInLibrary(b.id); n++; });
+  renderFoods(); toast(n ? "Added "+n+" common foods. Your own foods weren't changed." : "You already have all the common foods.");
+};
 $("foodForm").onsubmit=e=>{ e.preventDefault();
   const n=v=>v===""?0:r1(v);
   const base=editFood||{};
@@ -1305,7 +1342,7 @@ function openRecipe(f){
   $("rPot").innerHTML='<option value="">No pot (enter cooked weight)</option>'+pots().map((p,i)=>`<option value="${i}">${esc(p.name)} (${p.g} g)</option>`).join("");
   $("rPot").value = REC.pot===""?"":String(REC.pot);
   $("rW").value = REC.weight;
-  $("rDel").hidden=!REC.id;
+  $("rDel").hidden=!REC.id; $("rMissing").hidden=true;
   renderRec(); openSheet($("recSheet"));
 }
 $("newRecipe").onclick=()=>openRecipe();
@@ -1328,10 +1365,11 @@ function updRec(){
   const {t,raw}=recTotals(), cw=cookedWeight(raw);
   $("rWLbl").textContent = REC.pot!==""&&pots()[+REC.pot] ? "Full pot weight (g)" : "Cooked weight (g)";
   $("rRaw").textContent=`Batch: ${fmt(t.kcal)} kcal · ${r1(t.p)} g P · raw weight ${fmt(raw)} g`;
-  const ok = REC.ings.length && cw>0 && $("rName").value.trim();
+  const miss=[]; if(!$("rName").value.trim()) miss.push("name"); if(!REC.ings.length) miss.push("ingredients"); else if(!(cw>0)) miss.push("amounts");
+  REC.missing=miss; if(!miss.length) $("rMissing").hidden=true;
   $("rPer").textContent = cw>0 ? `Per 100 g cooked (${fmt(cw)} g batch): ${fmt(t.kcal/cw*100)} kcal · ${r1(t.p/cw*100)} P · ${r1(t.c/cw*100)} C · ${r1(t.f/cw*100)} F · ${r1(t.fb/cw*100)} fibre` : "Per 100 g: weigh the cooked batch";
   if(!(parseFloat(REC.weight)>0) && raw>0) $("rPer").textContent += " (using raw weight until you weigh it)";
-  $("rSave").disabled=!ok;
+
 }
 $("rSearch").oninput=()=>{
   const q=$("rSearch").value.trim().toLowerCase(); const p=$("rPick");
@@ -1391,6 +1429,13 @@ $("rPhotoBtn").onclick=()=>{
 $("rPhoto").onchange=async e=>{ const files=[...e.target.files].slice(0,4); if(!files.length) return; const imgs=await Promise.all(files.map(f=>fileToJpeg(f,1600))); aiRecipe(imgs,$("rText").value); };
 $("rParse").onclick=()=>{ if(!$("rText").value.trim()){ toast("Paste the ingredients first"); return; } if(aiOn()) aiRecipe([], $("rText").value); else localRecipe($("rText").value); };
 $("rSave").onclick=()=>{
+  updRec();
+  if(REC.missing.length){
+    const m=REC.missing, msg={name:"Give the recipe a name (top of this screen).",ingredients:"Add at least one ingredient: paste the list and tap Read ingredients, or search your library.",amounts:"Enter the grams for your ingredients, or the cooked weight."};
+    const b=$("rMissing"); b.hidden=false; b.textContent="Almost there: "+m.map(k=>msg[k]).join(" ");
+    const el = m[0]==="name" ? $("rName") : m[0]==="ingredients" ? $("rText") : $("rW");
+    el.scrollIntoView({block:"center"}); el.focus(); return;
+  }
   REC.ings.forEach(g=>{ if(g.ref){ ensureInLibrary(g.ref); g.foodId=g.ref; delete g.ref; delete g.per; delete g.name; delete g.basis; } });
   const {t,raw}=recTotals(), cw=cookedWeight(raw), name=$("rName").value.trim();
   const id=REC.id||slug(name);
@@ -1593,13 +1638,29 @@ $("cSync").onclick=()=>{ syncDown(); toast("Syncing…"); };
 $("impFile").onchange=async e=>{
   const file=e.target.files[0]; if(!file) return;
   try{
-    const j=JSON.parse(await file.text()); const items=[];
-    ["foods","days","body","settings"].forEach(c=>Object.entries(j[c]||{}).forEach(([id,data])=>{ DB[c][id]=data; items.push({collection:c,id,data}); }));
-    saveDB(); renderAll(); toast("Imported "+items.length+" records");
+    const j=JSON.parse(await file.text()); const items=[]; let kept=0;
+    if(!["foods","days","body","settings"].some(c=>j[c]&&typeof j[c]==="object")) throw new Error("not_budgie");
+    // Import only ADDS. Anything already in Budgie stays exactly as it is.
+    ["foods","body"].forEach(c=>Object.entries(j[c]||{}).forEach(([id,data])=>{ if(DB[c][id]){ kept++; return; } DB[c][id]=data; items.push({collection:c,id,data}); }));
+    Object.entries(j.days||{}).forEach(([id,data])=>{
+      const cur=DB.days[id];
+      if(!cur){ DB.days[id]=data; items.push({collection:"days",id,data}); return; }
+      const have=new Set((cur.entries||[]).map(e=>e.id)), add=(data.entries||[]).filter(e=>!have.has(e.id));
+      kept+=(data.entries||[]).length-add.length;
+      if(add.length){ const merged={...cur,entries:[...(cur.entries||[]),...add]}; DB.days[id]=merged; items.push({collection:"days",id,data:merged}); }
+    });
+    Object.entries(j.settings||{}).forEach(([id,data])=>{
+      const cur=DB.settings[id];
+      if(!cur){ DB.settings[id]=data; items.push({collection:"settings",id,data}); return; }
+      if(id==="saymap"){ const map={...(data.map||{}),...(cur.map||{})}; if(Object.keys(map).length>Object.keys(cur.map||{}).length){ DB.settings[id]={map}; items.push({collection:"settings",id,data:{map}}); } return; }
+      if(id==="pots"){ const names=new Set((cur.pots||[]).map(p=>p.name)), add=(data.pots||[]).filter(p=>!names.has(p.name)); if(add.length){ const v={pots:[...(cur.pots||[]),...add]}; DB.settings[id]=v; items.push({collection:"settings",id,data:v}); } return; }
+      kept++;
+    });
+    saveDB(); renderAll(); toast("Added "+items.length+" new · kept "+kept+" you already had");
     if(CONN&&CONN.url){ let waiting=0;
       for(let i=0;i<items.length;i+=40){ try{ await api("bulk",{items:items.slice(i,i+40)}); }catch(err){ const rest=items.slice(i); rest.forEach(it=>Q.push({action:"put",...it})); waiting=rest.length; saveQ(); status(); break; } }
-      toast(waiting ? "Imported "+items.length+" records. "+waiting+" are waiting for the Sheet and will upload when it's reachable." : "Import saved to your Sheet"); }
-  }catch(err){ toast("That file isn't a Budgie backup"); }
+      toast(waiting ? "Added "+items.length+" records. "+waiting+" are waiting for the Sheet and will upload when it's reachable." : "Added "+items.length+" new · kept "+kept+" · Import saved to your Sheet"); }
+  }catch(err){ console.warn(err); toast("That file isn't a Budgie backup"); }
   e.target.value="";
 };
 $("expBtn").onclick=()=>{ const blob=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="budgie-backup-"+todayIso()+".json"; document.body.appendChild(a); a.click(); a.remove(); };
