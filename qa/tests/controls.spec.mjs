@@ -54,6 +54,66 @@ test.describe("Today screen", () => {
     expect(entries(sheet, todayIso())[0]).toMatchObject({ foodId: "egg", amount: 1, kcal: 72 });
   });
 
+  test("A9 searching moves the search box to the top so results show above the keyboard", async ({ app }) => {
+    await openAdd(app);
+    await app.click('#modeSeg [data-m="lib"]');
+    await app.fill("#aSearch", "o");
+    const sheetTop = (await app.locator("#addSheet").boundingBox()).y;
+    const searchTop = (await app.locator("#aSearch").boundingBox()).y;
+    expect(searchTop - sheetTop, "search box is right under the title").toBeLessThan(80);
+    await expect(app.locator("#modeSeg")).toBeHidden();          // Meal and mode rows step aside while searching
+    await expect(app.locator("#addTitle")).toHaveText(/^Add to /);  // …and the title still says which meal
+    await expect(app.locator("#aPick button").first()).toBeInViewport();
+  });
+
+  test("A10 sheet fits the space above the phone keyboard", async ({ app }) => {
+    await openAdd(app);
+    const r = await app.evaluate(() => {
+      const vv = window.visualViewport; Object.defineProperty(vv, "height", { configurable: true, get: () => 400 });
+      Object.defineProperty(vv, "offsetTop", { configurable: true, get: () => 0 });
+      vv.dispatchEvent(new Event("resize"));
+      const s = document.getElementById("addSheet"), b = s.getBoundingClientRect();
+      return { bottom: b.bottom, height: b.height };
+    });
+    expect(r.bottom).toBeLessThanOrEqual(401);   // nothing hidden under the keyboard
+    expect(r.height).toBeLessThanOrEqual(400);
+  });
+
+  test("A11 the food you tap shows clearly as Selected (not logged yet); Change goes back to the list", async ({ app, sheet }) => {
+    await openAdd(app);
+    await app.click('#modeSeg [data-m="lib"]');
+    await app.fill("#aSearch", "oat");
+    await app.click('#aPick [data-id="oats"]');
+    await expect(app.locator("#aPicked")).toBeVisible();
+    await expect(app.locator("#aPicked")).toContainText("Rolled oats");
+    await expect(app.locator("#aPicked")).toContainText(/not in your log yet/i);
+    await expect(app.locator("#aPick")).toBeHidden();
+    await expect(app.locator("#aAmt")).toBeInViewport();
+    expect(entries(sheet, todayIso())).toHaveLength(0);
+    await app.click("#aChange");
+    await expect(app.locator("#aPick")).toBeVisible();
+    await expect(app.locator("#aSearch")).toBeFocused();
+  });
+
+  test("A12 food not found → add it as a new food → back on Add with it selected", async ({ app, sheet }) => {
+    await openAdd(app);
+    await app.click('#modeSeg [data-m="lib"]');
+    await app.selectOption("#aMeal", "dinner");
+    await app.fill("#aSearch", "Kefir");
+    await app.click("#aPick [data-newfood]");
+    await expect(app.locator("#foodSheet")).toBeVisible();
+    await expect(app.locator("#fName")).toHaveValue("Kefir");
+    await app.fill("#fK", "41"); await app.fill("#fP", "3.4");
+    await app.click('#foodForm [type="submit"]');
+    await expect(app.locator("#addSheet")).toBeVisible();
+    await expect(app.locator("#aPicked")).toContainText("Kefir");
+    await expect(app.locator("#aMeal")).toHaveValue("dinner");
+    await app.fill("#aAmt", "200");
+    await app.click("#aAdd");
+    await synced(app);
+    expect(entries(sheet, todayIso())[0]).toMatchObject({ name: "Kefir", amount: 200, kcal: 82, meal: "dinner" });
+  });
+
   test("A2 quick entry saves carbs, fat and fibre too", async ({ app, sheet }) => {
     await openAdd(app);
     await app.click('#modeSeg [data-m="quick"]');

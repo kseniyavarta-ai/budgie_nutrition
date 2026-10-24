@@ -7,7 +7,7 @@ Every update runs **all** of these again (regression), and the report says what 
 |---|---|---|---|
 | U1 | Set Budgie up on my phone | Paste the Web app URL + token, or a setup code from another device | S2, SU1 |
 | U2 | Try it before connecting a Sheet | "Try it without a Sheet" | SU2 |
-| U3 | Log a food from my library | + → Library → tap the food → grams → Add | S3, A1, L4 |
+| U3 | Log a food from my library | + → Library → tap the food → grams → Add | S3, A1, A9, A10, A11, L4 |
 | U4 | Log something quickly with my own numbers | + → Quick → name, kcal, P/C/F/fibre → Add (or Return) | L4, A2, A2b |
 | U5 | Say what I ate, without paid AI | + → 🎤 Say → talk or type → check the review card → Add | N1, N2, N3, A5, V1–V9, V11, R5 |
 | U6 | Use AI for Say/photos (optional, off by default) | Settings → "Use AI for 🎤 Say" | N4, V10, V12–V15 |
@@ -17,7 +17,7 @@ Every update runs **all** of these again (regression), and the report says what 
 | U10 | Fix or remove something I logged | Tap the entry → change grams/meal → Save, or Remove; × in the list | L1, L2, L3, A3 |
 | U11 | Log for another day | ‹ › arrows at the top | L5, DN1 |
 | U12 | Change my mind without saving | × on any add/edit screen | A4, FD5, RC3 |
-| U13 | Keep my food library | Foods → New food / tap to edit / ★ / delete (two taps) | F1–F4, FD3, FD4 |
+| U13 | Keep my food library | Foods → New food / tap to edit / ★ / delete (two taps); or "＋ Add … as a new food" while logging | F1–F4, FD3, FD4, A12 |
 | U14 | Find foods fast | Foods search box, group chips, ★ favourites and recents when adding | FD1, FD2, F4 |
 | U15 | Get the basic foods (breads, grains, dairy…) without losing mine | Foods → "Add common foods to my library" | F5 |
 | U16 | Build a recipe without paid AI | Foods → New recipe → paste ingredients → Read ingredients → weigh the batch → Save | R1, R2, R3, R6, RC1 |

@@ -37,6 +37,10 @@ Tests run against a **fake Google Sheet** (an in-memory copy of `apps-script/Cod
 | A3 | Remove from log | Edit an entry → "Remove from log" → gone from Today and Sheet |
 | A4 | Close without saving | × on Add food closes it, nothing saved |
 | A5 | Say: untick and pick | Untick one line, pick a food for an unknown one → only the right foods are saved |
+| A9 | Search above the keyboard | Typing in search moves the box right under the title (Meal and mode rows step aside, title says "Add to <meal>") and results are on screen |
+| A10 | Sheet fits above keyboard | When the phone keyboard opens, the Add screen shrinks to the visible area; nothing is hidden under the keyboard |
+| A11 | Selected food is obvious | Tapping a food shows a "✓ Selected … Not in your log yet" card, the list folds away, grams box is on screen; nothing is logged until Add; Change brings the list back |
+| A12 | New food from Add | Search finds nothing → "＋ Add “Kefir” as a new food" → New food form with the name filled → Save → back on Add (same meal) with Kefir selected → Add logs it |
 
 ## 🎤 Say without AI (Budgie reads it itself, default)
 
