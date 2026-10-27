@@ -8,5 +8,8 @@
     "live": "LIVE=1 APP= playwright test --grep @live",
     "report": "node report.mjs"
   },
-  "devDependencies": { "@playwright/test": "1.56.0" }
+  "devDependencies": {
+    "@playwright/test": "1.56.0",
+    "@zxing/library": "^0.21.3"
+  }
 }

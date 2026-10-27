@@ -77,9 +77,18 @@ Tests run against a **fake Google Sheet** (an in-memory copy of `apps-script/Cod
 |---|---|---|
 | P1 | Plate photo | Photo → items with grams/macros → approve → saved |
 | A6 | Label photo | "This is a nutrition label" + note → note is sent, New food opens with the label's numbers → saved |
-| A7 | Barcode photo | Photo of a barcode → number read → product looked up and saved |
+| A7 | Barcode photo | Photo of a barcode → number read → New food filled in from Open Food Facts |
 | A8 | Unreadable barcode | Blurry photo / scanner unavailable → "Couldn't read the barcode…" with what to do |
-| B1 | Barcode | Type a code → product saved to library → grams → added to log |
+| B1 | Barcode → autofill | Type a code → Look up → New food opens filled from Open Food Facts (name, kcal, P, C, F, fibre); nothing saved until you check and Save → back on Add (same meal) with it selected at one serving → logged |
+| B2 | 📷 Live scan | Scan barcode → camera reads it → camera closes by itself → form filled |
+| B3 | Known barcode | A barcode already in your library is selected straight away, amount = its serving |
+| B4 | Not in Open Food Facts | Form opens with "isn't in Open Food Facts yet"; type it from the label once → saved with the barcode → next scan finds it |
+| B5 | No nutrition data | Name filled, numbers left empty, message says to type them from the label |
+| B6 | Scan in Foods tab | New food → 📷 Scan barcode fills the form there; saving doesn't log anything |
+| B7 | Camera blocked | Says how to allow the camera; scanner closes |
+| B8 | Cancel scan | Cancel closes the scanner and turns the camera off |
+| B9 | iPhone scanner (ZXing) | Without the built-in reader, ZXing reads a real EAN-13 drawn in the camera feed |
+| B10 | UPC = EAN | 12-digit and 13-digit forms of one barcode match the same food (no duplicates) |
 
 ## Foods & recipes
 

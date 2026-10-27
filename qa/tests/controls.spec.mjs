@@ -185,15 +185,13 @@ test.describe("Today screen", () => {
     expect(Object.values(sheet.data.foods).find(f => f.name === "Test bar")).toMatchObject({ kcal: 400, p: 20 });
   });
 
-  test("A7 barcode photo is read and looked up", async ({ app, sheet }) => {
+  test("A7 barcode photo is read and fills in the food", async ({ app }) => {
     await app.evaluate(() => { window.BarcodeDetector = class { async detect() { return [{ rawValue: "0123456789012" }]; } }; });
     await openAdd(app);
     await app.click('#modeSeg [data-m="barcode"]');
     await app.setInputFiles("#bcFile", png("barcode.png"));
-    await expect(app.locator("#bcNum")).toHaveValue("0123456789012");
-    await expect(app.locator("#bcOut")).toContainText("Saved to your library");
-    await synced(app);
-    expect(Object.values(sheet.data.foods).some(f => f.barcode === "0123456789012")).toBe(true);
+    await expect(app.locator("#foodSheet")).toBeVisible();
+    await expect(app.locator("#fName")).toHaveValue("QA Foods Protein Bar");
   });
 
   test("A8 unreadable barcode photo says what to do", async ({ app }) => {

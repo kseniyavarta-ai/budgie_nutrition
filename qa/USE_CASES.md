@@ -13,7 +13,7 @@ Every update runs **all** of these again (regression), and the report says what 
 | U6 | Use AI for Say/photos (optional, off by default) | Settings → "Use AI for 🎤 Say" | N4, V10, V12–V15 |
 | U7 | Log from a photo of my plate | + → Photo → Analyze → check → Add | P1 |
 | U8 | Add a packaged food from its label | + → Photo → "This is a nutrition label" → check numbers → Save | A6 |
-| U9 | Add a packaged food from its barcode | + → Barcode → type or photograph it → grams → Add | B1, A7, A8 |
+| U9 | Add a packaged food from its barcode | + → Barcode → 📷 Scan (or photograph / type) → check the filled-in numbers → Save → Add; or Foods → New food → 📷 Scan | B1–B10, A7, A8 |
 | U10 | Fix or remove something I logged | Tap the entry → change grams/meal → Save, or Remove; × in the list | L1, L2, L3, A3 |
 | U11 | Log for another day | ‹ › arrows at the top | L5, DN1 |
 | U12 | Change my mind without saving | × on any add/edit screen | A4, FD5, RC3 |

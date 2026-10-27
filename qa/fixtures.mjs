@@ -16,11 +16,16 @@ export function shiftIso(iso, n) {
 async function wire(context, sheet) {
   await context.route(SHEET_URL, r => sheet.handle(r));
   await context.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
-  await context.route(/openfoodfacts\.org/, r => r.fulfill({
-    status: 200, contentType: "application/json",
-    body: JSON.stringify({ status: 1, product: { product_name: "Protein Bar", brands: "QA Foods", serving_size: "40 g",
-      nutriments: { "energy-kcal_100g": 400, proteins_100g: 25, carbohydrates_100g: 40, fat_100g: 14, fiber_100g: 9 } } }),
-  }));
+  // fake Open Food Facts: 0000000000000 is "not found", 1111111111111 has no nutrition data, anything else is a protein bar
+  await context.route(/openfoodfacts\.org/, r => {
+    const u = r.request().url();
+    if (/\/0000000000000\b/.test(u)) return r.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ status: 0, status_verbose: "product not found" }) });
+    if (/\/1111111111111\b/.test(u)) return r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: 1, product: { product_name: "Mystery tea", nutriments: {} } }) });
+    return r.fulfill({ status: 200, contentType: "application/json",
+      body: JSON.stringify({ status: 1, product: { product_name: "Protein Bar", brands: "QA Foods", serving_size: "40 g", serving_quantity: 40,
+        categories_tags: ["en:snacks", "en:protein-bars"],
+        nutriments: { "energy-kcal_100g": 400, proteins_100g: 25, carbohydrates_100g: 40, fat_100g: 14, fiber_100g: 9 } } }) });
+  });
 }
 
 export async function connectedPage(context, { connected = true } = {}) {
@@ -67,4 +72,16 @@ export async function synced(page) {
   await expect(page.locator("#status")).toHaveText(/Synced|Saved to Sheet/, { timeout: 15000 });
 }
 export async function goTab(page, t) { await page.click(`.tabs [data-tab="${t}"]`); }
+// phone camera stand-in: a blank video stream and a barcode reader that "sees" code (or nothing, or a blocked camera)
+export async function fakeCamera(page, code, { blocked = false } = {}) {
+  await page.evaluate(([c, blocked]) => {
+    window.BarcodeDetector = class { async detect() { return c ? [{ rawValue: c }] : []; } };
+    if (!navigator.mediaDevices) Object.defineProperty(navigator, "mediaDevices", { value: {}, configurable: true });
+    navigator.mediaDevices.getUserMedia = async () => {
+      if (blocked) throw new DOMException("Permission denied", "NotAllowedError");
+      const cv = document.createElement("canvas"); cv.width = cv.height = 16; cv.getContext("2d").fillRect(0, 0, 16, 16);
+      window.__camOn = true; return cv.captureStream(5);
+    };
+  }, [code, blocked]);
+}
 export const entries = (sheet, date) => ((sheet.day(date) || {}).entries) || [];

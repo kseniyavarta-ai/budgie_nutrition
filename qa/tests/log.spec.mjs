@@ -1,4 +1,5 @@
-import { test, expect, todayIso, shiftIso, openAdd, addFromLibrary, synced, entries, goTab, SHEET_URL } from "../fixtures.mjs";
+import { test, expect, todayIso, shiftIso, openAdd, addFromLibrary, synced, entries, goTab, SHEET_URL, fakeCamera } from "../fixtures.mjs";
+const bgSync = page => page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
 
 test.describe("Food log", () => {
   test("L1 edit an entry's grams", async ({ app, sheet }) => {
@@ -284,17 +285,145 @@ test.describe("Photo and barcode", () => {
     expect(entries(sheet, todayIso()).map(e => e.name)).toEqual(["Rolled oats", "Banana"]);
   });
 
-  test("B1 barcode lookup saves the product and the entry", async ({ app, sheet }) => {
-    await openAdd(app);
-    await app.click('#modeSeg [data-m="barcode"]');
+  const barcodeMode = async app => { await openAdd(app); await app.click('#modeSeg [data-m="barcode"]'); };
+
+  test("B1 typed barcode fills in a New food from Open Food Facts → check → Save → logged at one serving", async ({ app, sheet }) => {
+    await barcodeMode(app);
+    await app.selectOption("#aMeal", "lunch");
     await app.fill("#bcNum", "0123456789012");
     await app.click("#bcLook");
-    await expect(app.locator("#bcOut")).toContainText("Saved to your library");
-    await app.fill("#bcAmt", "40");
+    await expect(app.locator("#foodSheet")).toBeVisible();
+    await expect(app.locator("#fSrc")).toContainText("Open Food Facts");
+    await expect(app.locator("#fName")).toHaveValue("QA Foods Protein Bar");
+    for (const [id, v] of [["#fK", "400"], ["#fP", "25"], ["#fC", "40"], ["#fF", "14"], ["#fFb", "9"]]) await expect(app.locator(id)).toHaveValue(v);
+    expect(Object.values(sheet.data.foods).some(f => f.barcode === "0123456789012")).toBe(false);   // nothing saved before you check it
+    await app.click('#foodForm [type="submit"]');
+    await expect(app.locator("#addSheet")).toBeVisible();
+    await expect(app.locator("#aPicked")).toContainText("QA Foods Protein Bar");
+    await expect(app.locator("#aAmt")).toHaveValue("40");                                         // one serving
+    await expect(app.locator("#aMeal")).toHaveValue("lunch");
     await app.click("#aAdd");
     await synced(app);
     const food = Object.values(sheet.data.foods).find(f => f.barcode === "0123456789012");
-    expect(food).toMatchObject({ kcal: 400, p: 25 });
-    expect(entries(sheet, todayIso())[0]).toMatchObject({ foodId: food.id, kcal: 160 });
+    expect(food).toMatchObject({ kcal: 400, p: 25, c: 40, f: 14, fb: 9, servingG: 40 });
+    expect(entries(sheet, todayIso())[0]).toMatchObject({ foodId: food.id, amount: 40, kcal: 160, meal: "lunch" });
+  });
+
+  test("B2 📷 Scan barcode: live camera reads the code and fills in the food", async ({ app }) => {
+    await barcodeMode(app);
+    await fakeCamera(app, "0123456789012");
+    await app.click("#bcScan");
+    await expect(app.locator("#foodSheet")).toBeVisible();
+    await expect(app.locator("#scanView")).toBeHidden();                 // camera closes by itself
+    expect(await app.evaluate(() => window.__camOn)).toBe(true);
+    await expect(app.locator("#fName")).toHaveValue("QA Foods Protein Bar");
+  });
+
+  test("B3 a barcode you saved before is picked straight away, at one serving", async ({ app, sheet }) => {
+    sheet.data.foods.bar = { id: "bar", name: "My bar", basis: "100g", unit: "", group: "Other", kcal: 380, p: 30, c: 35, f: 12, fb: 10, barcode: "0123456789012", servingG: 45 };
+    await bgSync(app); await synced(app);
+    await barcodeMode(app);
+    await fakeCamera(app, "0123456789012");
+    await app.click("#bcScan");
+    await expect(app.locator("#bcOut")).toContainText("My bar");
+    await expect(app.locator("#foodSheet")).toBeHidden();
+    await expect(app.locator("#bcAmt")).toHaveValue("45");
+    await app.click("#aAdd");
+    await synced(app);
+    expect(entries(sheet, todayIso())[0]).toMatchObject({ foodId: "bar", amount: 45, kcal: 171 });
+  });
+
+  test("B4 barcode not in Open Food Facts: type it from the label once, next scan finds it", async ({ app, sheet }) => {
+    await barcodeMode(app);
+    await fakeCamera(app, "0000000000000");
+    await app.click("#bcScan");
+    await expect(app.locator("#foodSheet")).toBeVisible();
+    await expect(app.locator("#fSrc")).toContainText("isn't in Open Food Facts");
+    await app.fill("#fName", "Local kefir"); await app.fill("#fK", "41"); await app.fill("#fP", "3.4");
+    await app.click('#foodForm [type="submit"]');
+    await expect(app.locator("#aPicked")).toContainText("Local kefir");
+    await synced(app);
+    expect(Object.values(sheet.data.foods).find(f => f.name === "Local kefir").barcode).toBe("0000000000000");
+    await app.click("#addSheet [data-close]");
+    await barcodeMode(app);
+    await fakeCamera(app, "0000000000000");
+    await app.click("#bcScan");
+    await expect(app.locator("#bcOut")).toContainText("Local kefir");
+  });
+
+  test("B5 product found but without nutrition numbers: name filled, numbers left for you", async ({ app }) => {
+    await barcodeMode(app);
+    await app.fill("#bcNum", "1111111111111");
+    await app.click("#bcLook");
+    await expect(app.locator("#fName")).toHaveValue("Mystery tea");
+    await expect(app.locator("#fK")).toHaveValue("");
+    await expect(app.locator("#fSrc")).toContainText("no nutrition numbers");
+  });
+
+  test("B6 Foods → New food → 📷 Scan barcode fills the form there (nothing logged)", async ({ app, sheet }) => {
+    await goTab(app, "foods");
+    await app.click("#newFood");
+    await fakeCamera(app, "0123456789012");
+    await app.click("#fScan");
+    await expect(app.locator("#fName")).toHaveValue("QA Foods Protein Bar");
+    await expect(app.locator("#fK")).toHaveValue("400");
+    await app.click('#foodForm [type="submit"]');
+    await expect(app.locator("#foodSheet")).toBeHidden();
+    await expect(app.locator("#addSheet")).toBeHidden();
+    await synced(app);
+    expect(Object.values(sheet.data.foods).find(f => f.barcode === "0123456789012")).toMatchObject({ kcal: 400, servingG: 40 });
+    expect(entries(sheet, todayIso())).toHaveLength(0);
+  });
+
+  test("B7 camera blocked: says how to allow it, scanner closes", async ({ app }) => {
+    await barcodeMode(app);
+    await fakeCamera(app, null, { blocked: true });
+    await app.click("#bcScan");
+    await expect(app.locator("#scanView")).toBeHidden();
+    await expect(app.locator("#bcOut")).toContainText(/allow the camera/i);
+  });
+
+  test("B9 iPhone way (no built-in reader): ZXing reads a real EAN-13 barcode from the camera", async ({ app }) => {
+    const fs = await import("node:fs");
+    const zx = fs.readFileSync(new URL("../node_modules/@zxing/library/umd/index.min.js", import.meta.url), "utf8");
+    await app.context().route(/unpkg\.com\/@zxing/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: zx }));
+    await barcodeMode(app);
+    await app.evaluate(() => {
+      delete window.BarcodeDetector;                                   // like iPhone Safari
+      // draw a real EAN-13 for 0123456789012 (first digit 0 → all left digits use L codes)
+      const L = ["0001101","0011001","0010011","0111101","0100011","0110001","0101111","0111011","0110111","0001011"];
+      const R = L.map(c => [...c].map(b => b === "0" ? "1" : "0").join(""));
+      const d = "0123456789012".split("").map(Number);
+      const bits = "101" + d.slice(1, 7).map(x => L[x]).join("") + "01010" + d.slice(7).map(x => R[x]).join("") + "101";
+      const cv = document.createElement("canvas"); cv.width = 640; cv.height = 360;
+      const g = cv.getContext("2d"); const paint = () => { g.fillStyle = "#fff"; g.fillRect(0, 0, 640, 360); g.fillStyle = "#000";
+        [...bits].forEach((b, i) => { if (b === "1") g.fillRect(40 + i * 5, 60, 5, 240); }); };
+      paint(); setInterval(paint, 100);
+      navigator.mediaDevices.getUserMedia = async () => cv.captureStream(10);
+    });
+    await app.click("#bcScan");
+    await expect(app.locator("#fName")).toHaveValue("QA Foods Protein Bar", { timeout: 15000 });
+    await expect(app.locator("#bcNum")).toHaveValue("0123456789012");
+  });
+
+  test("B10 12-digit (UPC) and 13-digit (EAN) forms of the same barcode are one product", async ({ app, sheet }) => {
+    sheet.data.foods.bar = { id: "bar", name: "My bar", basis: "100g", unit: "", group: "Other", kcal: 380, p: 30, c: 35, f: 12, fb: 10, barcode: "123456789012" };
+    await bgSync(app); await synced(app);
+    await barcodeMode(app);
+    await fakeCamera(app, "0123456789012");
+    await app.click("#bcScan");
+    await expect(app.locator("#bcOut")).toContainText("My bar");
+    await expect(app.locator("#foodSheet")).toBeHidden();
+  });
+
+  test("B8 Cancel closes the scanner and turns the camera off", async ({ app }) => {
+    await barcodeMode(app);
+    await fakeCamera(app, null);
+    await app.click("#bcScan");
+    await expect(app.locator("#scanView")).toBeVisible();
+    await app.click("#scanCancel");
+    await expect(app.locator("#scanView")).toBeHidden();
+    expect(await app.evaluate(() => document.getElementById("scanVideo").srcObject)).toBeNull();
+    await expect(app.locator("#addSheet")).toBeVisible();
   });
 });
