@@ -32,6 +32,7 @@ Every update runs **all** of these again (regression), and the report says what 
 | U25 | Reconnect or check the connection | Settings → Save and test, Sync now | ST4, ST5 |
 | U26 | Set up a second phone | Settings → Copy setup code → paste on the other phone | ST6, SU1 |
 | U27 | Back up and restore without losing anything | Settings → Export backup / Import (import only adds) | ST7, Y5, Y6 |
+| U29 | Get a recipe or food Claude worked out for me into Budgie | Foods → 📋 Paste from Claude → paste the code → Add | LK1–LK4 |
 | U28 | Get new versions | Banner "New version of Budgie" → tap | UP1, D2 |
 
 ## Regression rule

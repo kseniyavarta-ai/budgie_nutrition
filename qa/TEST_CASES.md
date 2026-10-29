@@ -142,6 +142,15 @@ Tests run against a **fake Google Sheet** (an in-memory copy of `apps-script/Cod
 | ST7 | Export backup | Downloads `budgie-backup-<date>.json` with all foods and logs |
 | UP1 | Update banner | New version online → banner shows → tap → app reloads to the new version |
 
+## Paste from Claude
+
+| ID | Case | Pass when |
+|---|---|---|
+| LK1 | Paste a code | Foods → 📋 Paste from Claude → paste (extra text around the code is fine) → preview lists what's new and what you already have → Add → new foods + recipe saved; your own foods unchanged; recipe opens as editable |
+| LK2 | Not a code | Explains it isn't a Budgie code; Add stays off |
+| LK3 | Link | Opening a `#add=` link shows the same preview; × adds nothing |
+| LK4 | Same code twice | Nothing new to add; Add stays off |
+
 ## Coverage gate
 
 | ID | Case | Pass when |

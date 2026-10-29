@@ -331,7 +331,10 @@ details summary{list-style:none}
       <button class="btn" id="newRecipe">New recipe</button>
       <button class="btn ghost" id="newFood">New food</button>
     </div>
-    <button class="btn ghost" id="addCommon" type="button">Add common foods to my library</button>
+    <div class="row2">
+      <button class="btn ghost" id="addCommon" type="button">Add common foods</button>
+      <button class="btn ghost" id="pasteBtn" type="button">📋 Paste from Claude</button>
+    </div>
     <input type="search" id="fSearch" placeholder="Search your foods and recipes" aria-label="Search foods">
     <div class="seg" id="fFilter">
       <button aria-pressed="true" data-f="all">All</button>
@@ -558,6 +561,15 @@ details summary{list-style:none}
 </div>
 
 <div class="toast" id="toast" hidden></div>
+<div class="sheet" id="pasteSheet" hidden role="dialog" aria-modal="true" aria-labelledby="pasteTitle">
+  <div class="in">
+    <h3><span id="pasteTitle">Paste from Claude</span><button class="x" data-close aria-label="Close">×</button></h3>
+    <p class="note">Paste the code Claude sent you (it starts with <b>budgie-add:</b>). Nothing is added until you tap Add, and foods you already have are never changed.</p>
+    <textarea id="pasteText" rows="3" placeholder="budgie-add:…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+    <div class="alert" id="pasteOut" hidden></div>
+    <button class="btn" id="pasteAdd" type="button" disabled>Add to my library</button>
+  </div>
+</div>
 <div class="scan" id="scanView" hidden role="dialog" aria-label="Barcode scanner">
   <video id="scanVideo" playsinline muted autoplay></video>
   <div class="scan-box" aria-hidden="true"></div>
@@ -569,7 +581,7 @@ details summary{list-style:none}
 <script>
 (() => {
 "use strict";
-const VERSION = "v2026.10.26 · scan-barcode";
+const VERSION = "v2026.10.29 · paste-from-claude";
 const $ = id => document.getElementById(id);
 const MEALS = [["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["dessert","Dessert"],["other","Snack / other"]];
 const DEFAULT_PLAN = {kcalLow:1750,kcalHigh:1800,protein:115,fibre:28,startKg:null,goalKg:null,startDate:null,pace:0.35};
@@ -1568,6 +1580,49 @@ $("rSave").onclick=()=>{
 };
 $("rDel").onclick=()=>armDelete($("rDel"),()=>{ del("foods",REC.id); renderFoods(); closeSheet(); toast("Recipe deleted"); });
 
+/* ================= paste from Claude ================= */
+// code = "budgie-add:" + base64(JSON {v:1, foods:[...]}). Only adds foods you don't have; yours are never changed.
+const NUMK=["kcal","p","c","f","fb","pieceG","servingG"];
+function cleanFood(f){
+  if(!f||typeof f!=="object"||typeof f.id!=="string"||!/^[a-z0-9][a-z0-9-]{0,80}$/.test(f.id)||typeof f.name!=="string"||!f.name.trim()) return null;
+  const o={id:f.id,name:f.name.trim().slice(0,120),basis:f.basis==="unit"?"unit":"100g",unit:String(f.unit||"").slice(0,30),group:GROUPS.includes(f.group)?f.group:"Other"};
+  NUMK.forEach(k=>{ if(f[k]!=null&&isFinite(+f[k])) o[k]=r1(+f[k]); }); ["kcal","p","c","f","fb"].forEach(k=>{ if(o[k]==null) o[k]=0; });
+  if(f.note) o.note=String(f.note).slice(0,300);
+  if(f.recipe&&Array.isArray(f.recipe.ingredients)){ const R=f.recipe;
+    o.recipe={ingredients:R.ingredients.filter(g=>g&&typeof g.foodId==="string").map(g=>({foodId:g.foodId,amount:+g.amount||0})),
+      cookedWeight:+R.cookedWeight>0?+R.cookedWeight:null,pot:"",batchWeight:+R.batchWeight||null,
+      batch:Object.fromEntries(["kcal","p","c","f","fb"].map(k=>[k,r1(+(R.batch||{})[k]||0)]))}; o.group="Recipes"; }
+  return o;
+}
+function parseAddCode(t){
+  const m=String(t||"").match(/budgie-add:\s*([A-Za-z0-9+/=_-]+)/) || String(t||"").match(/#add=([A-Za-z0-9+/=_-]+)/); if(!m) return null;
+  try{ const j=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,"+").replace(/_/g,"/")))));
+    const foods=(Array.isArray(j.foods)?j.foods:[]).map(cleanFood).filter(Boolean); return foods.length?foods:null; }catch(e){ return null; }
+}
+let PASTE=null;
+function previewPaste(){
+  const t=$("pasteText").value, o=$("pasteOut"), b=$("pasteAdd");
+  PASTE=parseAddCode(t); b.disabled=true; b.textContent="Add to my library";
+  if(!t.trim()){ o.hidden=true; return; }
+  o.hidden=false;
+  if(!PASTE){ o.className="alert err"; o.textContent="That doesn't look like a Budgie code. Copy the whole code from Claude's message (it starts with budgie-add:)."; return; }
+  const fresh=PASTE.filter(f=>!DB.foods[f.id]), have=PASTE.filter(f=>DB.foods[f.id]);
+  o.className="alert";
+  o.innerHTML=(fresh.length?"<b>Will add:</b>"+fresh.map(f=>`<small>${f.recipe?"🍲 ":""}${esc(f.name)} · ${fmt(f.kcal)} kcal ${basisTxt(f)}${f.recipe?" · recipe with "+f.recipe.ingredients.length+" ingredients":""}</small>`).join(""):"Nothing new to add.")
+    +(have.length?`<small>Already in your library, kept as is: ${esc(have.map(f=>DB.foods[f.id].name).join(", "))}</small>`:"");
+  if(fresh.length){ b.disabled=false; b.textContent="Add "+fresh.length+" to my library"; }
+}
+function openPaste(text){ $("pasteText").value=text||""; openSheet($("pasteSheet")); previewPaste(); if(!text) setTimeout(()=>$("pasteText").focus(),60); }
+$("pasteBtn").onclick=()=>openPaste("");
+$("pasteText").oninput=previewPaste;
+$("pasteAdd").onclick=()=>{
+  if(!PASTE) return; const fresh=PASTE.filter(f=>!DB.foods[f.id]); if(!fresh.length) return;
+  fresh.forEach(f=>put("foods",f.id,f));
+  const main=fresh.find(f=>f.recipe)||fresh[0];
+  closeSheet(); FGROUP=""; $("fSearch").value=main.name; renderFoods(); renderPick();
+  toast("Added "+main.name+(fresh.length>1?" and "+(fresh.length-1)+" more":""));
+};
+
 /* ================= plan math ================= */
 const weighIns = () => Object.values(DB.body).filter(x=>x.kg>0).sort((a,b)=>a.date.localeCompare(b.date));
 const latestKg = () => { const w=weighIns(); return w.length?w[w.length-1].kg:(plan().startKg||null); };
@@ -1824,9 +1879,11 @@ setTab(LS.get("budgie-tab","today"));
 renderAll(); status();
 if(!CONN) showSetup(); else syncDown();
 checkUpdate();
-/* deep link for Siri Shortcuts: #say opens voice logging, #say=<text> fills it in */
+/* deep link for Siri Shortcuts: #say opens voice logging, #say=<text> fills it in. #add=<code> opens Paste from Claude */
 function handleHash(){
-  const h=location.hash; if(!h.startsWith("#say")) return;
+  const h=location.hash;
+  if(h.startsWith("#add=")){ history.replaceState(null,"",location.pathname); setTab("foods"); openPaste("budgie-add:"+h.slice(5)); return; }
+  if(!h.startsWith("#say")) return;
   const text=h.startsWith("#say=") ? decodeURIComponent(h.slice(5).replace(/\+/g," ")) : "";
   history.replaceState(null,"",location.pathname);
   if(!CONN) return;
